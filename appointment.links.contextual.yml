@@ -1,0 +1,21 @@
+entity.appointment.edit_form:
+  route_name: entity.appointment.edit_form
+  group: appointment
+  title: "Edit"
+
+entity.appointment.delete_form:
+  route_name: entity.appointment.delete_form
+  group: appointment
+  title: "Delete"
+  weight: 10
+
+entity.appointment_agency.edit_form:
+  route_name: entity.appointment_agency.edit_form
+  group: appointment_agency
+  title: "Edit"
+
+entity.appointment_agency.delete_form:
+  route_name: entity.appointment_agency.delete_form
+  group: appointment_agency
+  title: "Delete"
+  weight: 10

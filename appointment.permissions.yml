@@ -1,0 +1,40 @@
+administer appointment:
+  title: "Administer appointments"
+  restrict access: true
+view appointment:
+  title: "View appointment"
+view own appointment:
+  title: "View own appointments"
+  description: "Allows a user to see their own appointment dashboard."
+edit appointment:
+  title: "Edit appointment"
+delete appointment:
+  title: "Delete appointment"
+create appointment:
+  title: "Create appointment"
+cancel own appointment:
+  title: "Cancel own appointment"
+view appointment revision:
+  title: "View appointment revision"
+revert appointment revision:
+  title: "Revert appointment revision"
+delete appointment revision:
+  title: "Delete appointment revision"
+
+administer appointment_agency:
+  title: "Administer agencies"
+  restrict access: true
+view appointment_agency:
+  title: "View agency"
+edit appointment_agency:
+  title: "Edit agency"
+delete appointment_agency:
+  title: "Delete agency"
+create appointment_agency:
+  title: "Create agency"
+view appointment_agency revision:
+  title: "View agency revision"
+revert appointment_agency revision:
+  title: "Revert agency revision"
+delete appointment_agency revision:
+  title: "Delete agency revision"

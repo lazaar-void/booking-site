@@ -1,0 +1,30 @@
+entity.appointment.settings:
+  title: "Appointment"
+  description: "Configure an Appointment entity type."
+  route_name: entity.appointment.settings
+  parent: system.admin_structure
+
+entity.appointment.collection:
+  title: "Appointments"
+  description: "List of appointments."
+  route_name: entity.appointment.collection
+  parent: system.admin_content
+
+entity.appointment_agency.settings:
+  title: "Agency"
+  description: "Configure an Agency entity type."
+  route_name: entity.appointment_agency.settings
+  parent: system.admin_structure
+
+entity.appointment_agency.collection:
+  title: "Agencies"
+  description: "List of agencies."
+  route_name: entity.appointment_agency.collection
+  parent: system.admin_content
+
+appointment.import_csv:
+  title: 'Import Agencies and Advisers'
+  description: 'Import agencies and advisers from CSV files.'
+  route_name: appointment.import_csv
+  parent: system.admin_config_services
+  weight: 10

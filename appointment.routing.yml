@@ -1,0 +1,100 @@
+# Admin settings routes.
+entity.appointment.settings:
+  path: "admin/structure/appointment/settings"
+  defaults:
+    _form: '\Drupal\appointment\Form\AppointmentSettingsForm'
+    _title: "Settings"
+  requirements:
+    _permission: "administer appointment"
+
+entity.appointment_agency.settings:
+  path: "admin/structure/appointment-agency"
+  defaults:
+    _form: '\Drupal\appointment\Form\AgencySettingsForm'
+    _title: "Agency"
+  requirements:
+    _permission: "administer appointment_agency"
+
+appointment.import_csv:
+  path: "/admin/config/appointment/import"
+  defaults:
+    _form: '\Drupal\appointment\Form\ImportCsvForm'
+    _title: 'Import Agencies and Advisers'
+  requirements:
+    _permission: 'administer appointment'
+
+# --- Front-end booking routes ---
+
+# 6-step booking wizard.
+appointment.booking_wizard:
+  path: '/book-an-appointment'
+  defaults:
+    _controller: '\Drupal\appointment\Controller\AppointmentController::bookingWizard'
+    _title: 'Book an appointment'
+  requirements:
+    _permission: 'access content'
+
+# JSON endpoint: available time slots for a given adviser and date.
+appointment.slots_json:
+  path: '/api/appointment/slots/{adviser_id}/{date}'
+  defaults:
+    _controller: '\Drupal\appointment\Controller\AppointmentController::slotsJson'
+    _title: 'Available slots'
+  requirements:
+    _permission: 'access content'
+    adviser_id: '\d+'
+    date: '\d{4}-\d{2}-\d{2}'
+
+# JSON range endpoint: for FullCalendar integration.
+appointment.slots_range_json:
+  path: '/api/appointment/slots-range/{adviser_id}'
+  defaults:
+    _controller: '\Drupal\appointment\Controller\AppointmentController::slotsRangeJson'
+    _title: 'Available slots range'
+  requirements:
+    _permission: 'access content'
+    adviser_id: '\d+'
+
+# User dashboard: my appointments.
+appointment.my_appointments:
+  path: '/my-appointments'
+  defaults:
+    _controller: '\Drupal\appointment\Controller\AppointmentController::myAppointments'
+    _title: 'My appointments'
+  requirements:
+    _permission: 'access content'
+
+appointment.cancel:
+  path: '/my-appointments/cancel/{appointment}'
+  defaults:
+    _form: '\Drupal\appointment\Form\AppointmentCancelForm'
+    _title: 'Cancel appointment'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+    appointment: '\d+'
+
+# --- Appointment Modification (Lookup, Verify, Edit) ---
+
+appointment.modify_lookup:
+  path: '/appointment/modify'
+  defaults:
+    _form: '\Drupal\appointment\Form\AppointmentLookupForm'
+    _title: 'Modify your appointment'
+  requirements:
+    _permission: 'access content'
+
+appointment.modify_verify:
+  path: '/appointment/modify/verify'
+  defaults:
+    _form: '\Drupal\appointment\Form\AppointmentVerifyForm'
+    _title: 'Verify your identity'
+  requirements:
+    _permission: 'access content'
+
+appointment.modify_edit:
+  path: '/appointment/modify/edit'
+  defaults:
+    _form: '\Drupal\appointment\Form\AppointmentModifyForm'
+    _title: 'Edit appointment details'
+  requirements:
+    _permission: 'access content'

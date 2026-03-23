@@ -1,0 +1,31 @@
+booking-wizard:
+  version: 1.x
+  css:
+    theme:
+      css/appointment.css: {}
+  js:
+    js/appointment.js: {}
+  dependencies:
+    - core/drupal
+    - core/jquery
+    - core/drupal.ajax
+    - core/drupalSettings
+
+fullcalendar:
+  remote: https://github.com/fullcalendar/fullcalendar
+  version: 6.1.11
+  license:
+    name: MIT
+    url: https://github.com/fullcalendar/fullcalendar/blob/master/LICENSE.txt
+    gpl-compatible: true
+  js:
+    https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js: { type: external, minified: true }
+
+booking-calendar:
+  version: 1.x
+  js:
+    js/appointment-calendar.js: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings
+    - appointment/fullcalendar

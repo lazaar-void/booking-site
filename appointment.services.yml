@@ -1,0 +1,31 @@
+services:
+  appointment.manager:
+    class: Drupal\appointment\Service\AppointmentManagerService
+    arguments:
+      - "@entity_type.manager"
+      - "@tempstore.private"
+      - "@current_user"
+      - "@config.factory"
+      - "@logger.channel.appointment"
+
+  appointment.email:
+    class: Drupal\appointment\Service\EmailService
+    arguments:
+      - "@plugin.manager.mail"
+      - "@entity_type.manager"
+      - "@config.factory"
+      - "@logger.channel.appointment"
+      - "@language_manager"
+      - "@queue"
+
+  appointment.csv_importer:
+    class: Drupal\appointment\Service\CsvImporter
+    arguments:
+      - "@entity_type.manager"
+      - "@logger.channel.appointment"
+      - "@messenger"
+      - "@file_system"
+
+  logger.channel.appointment:
+    parent: logger.channel_base
+    arguments: ["appointment"]

@@ -1,0 +1,533 @@
+<?php
+
+/**
+ * @file
+ * Primary module hooks for Appointment module.
+ */
+
+use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\Core\Render\Element;
+use Drupal\user\UserInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\user\Entity\User;
+use Drupal\ultimate_cron\Entity\UltimateCronJob;
+
+/**
+ * Implements hook_theme().
+ */
+function appointment_theme(): array {
+  return [
+    'appointment'               => ['render element' => 'elements'],
+    'appointment_agency'        => ['render element' => 'elements'],
+    'appointment_my_appointments' => [
+      'variables' => ['appointments' => []],
+    ],
+  ];
+}
+
+/**
+ * Prepares variables for appointment templates.
+ *
+ * Default template: appointment.html.twig.
+ */
+function template_preprocess_appointment(array &$variables): void {
+  $variables['view_mode'] = $variables['elements']['#view_mode'];
+  foreach (Element::children($variables['elements']) as $key) {
+    $variables['content'][$key] = $variables['elements'][$key];
+  }
+}
+
+/**
+ * Prepares variables for agency templates.
+ *
+ * Default template: appointment-agency.html.twig.
+ */
+function template_preprocess_appointment_agency(array &$variables): void {
+  $variables['view_mode'] = $variables['elements']['#view_mode'];
+  foreach (Element::children($variables['elements']) as $key) {
+    $variables['content'][$key] = $variables['elements'][$key];
+  }
+}
+
+/**
+ * Implements hook_user_cancel().
+ */
+function appointment_user_cancel($edit, UserInterface $account, $method): void {
+  switch ($method) {
+    case 'user_cancel_block_unpublish':
+      // Unpublish appointments.
+      $storage = \Drupal::entityTypeManager()->getStorage('appointment');
+      $appointment_ids = $storage->getQuery()
+        ->condition('uid', $account->id())
+        ->condition('status', 1)
+        ->accessCheck(FALSE)
+        ->execute();
+      foreach ($storage->loadMultiple($appointment_ids) as $appointment) {
+        $appointment->set('status', FALSE)->save();
+      }
+
+      // Unpublish agencies.
+      $agency_storage = \Drupal::entityTypeManager()->getStorage('appointment_agency');
+      $agency_ids = $agency_storage->getQuery()
+        ->condition('uid', $account->id())
+        ->condition('status', 1)
+        ->accessCheck(FALSE)
+        ->execute();
+      foreach ($agency_storage->loadMultiple($agency_ids) as $agency) {
+        $agency->set('status', FALSE)->save();
+      }
+      break;
+
+    case 'user_cancel_reassign':
+      // Anonymize appointments.
+      $storage = \Drupal::entityTypeManager()->getStorage('appointment');
+      $appointment_ids = $storage->getQuery()
+        ->condition('uid', $account->id())
+        ->accessCheck(FALSE)
+        ->execute();
+      foreach ($storage->loadMultiple($appointment_ids) as $appointment) {
+        $appointment->setOwnerId(0)->save();
+      }
+
+      // Anonymize agencies.
+      $agency_storage = \Drupal::entityTypeManager()->getStorage('appointment_agency');
+      $agency_ids = $agency_storage->getQuery()
+        ->condition('uid', $account->id())
+        ->accessCheck(FALSE)
+        ->execute();
+      foreach ($agency_storage->loadMultiple($agency_ids) as $agency) {
+        $agency->setOwnerId(0)->save();
+      }
+      break;
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_predelete() for user entities.
+ */
+function appointment_user_predelete(UserInterface $account): void {
+  // --- Delete appointments ---
+  $storage = \Drupal::entityTypeManager()->getStorage('appointment');
+  $appointment_ids = $storage->getQuery()
+    ->condition('uid', $account->id())
+    ->accessCheck(FALSE)
+    ->execute();
+  $storage->delete(
+    $storage->loadMultiple($appointment_ids)
+  );
+  // Delete old revisions.
+  $appointment_revisions = $storage->getQuery()
+    ->allRevisions()
+    ->condition('uid', $account->id())
+    ->accessCheck(FALSE)
+    ->execute();
+  foreach (array_keys($appointment_revisions) as $revision_id) {
+    $storage->deleteRevision($revision_id);
+  }
+
+  // --- Delete agencies ---
+  $agency_storage = \Drupal::entityTypeManager()->getStorage('appointment_agency');
+  $agency_ids = $agency_storage->getQuery()
+    ->condition('uid', $account->id())
+    ->accessCheck(FALSE)
+    ->execute();
+  $agency_storage->delete(
+    $agency_storage->loadMultiple($agency_ids)
+  );
+  // Delete old revisions.
+  $agency_revisions = $agency_storage->getQuery()
+    ->allRevisions()
+    ->condition('uid', $account->id())
+    ->accessCheck(FALSE)
+    ->execute();
+  foreach (array_keys($agency_revisions) as $revision_id) {
+    $agency_storage->deleteRevision($revision_id);
+  }
+}
+
+/**
+ * Implements hook_entity_base_field_info().
+ *
+ * Attaches adviser-specific fields to the User entity so that users with
+ * the 'adviser' role can be assigned to an agency, define their working
+ * hours, and list their specializations.
+ */
+function appointment_entity_base_field_info(EntityTypeInterface $entity_type): array {
+  $fields = [];
+
+  if ($entity_type->id() !== 'user') {
+    return $fields;
+  }
+
+  // The agency this adviser is attached to.
+  $fields['adviser_agency'] = BaseFieldDefinition::create('entity_reference')
+    ->setLabel(t('Agency'))
+    ->setDescription(t('The agency this adviser belongs to.'))
+    ->setSetting('target_type', 'appointment_agency')
+    ->setDisplayOptions('form', [
+      'type' => 'entity_reference_autocomplete',
+      'settings' => [
+        'match_operator' => 'CONTAINS',
+        'size' => 60,
+        'placeholder' => '',
+      ],
+      'weight' => 5,
+    ])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', [
+      'label' => 'above',
+      'type' => 'entity_reference_label',
+      'weight' => 5,
+    ])
+    ->setDisplayConfigurable('view', TRUE);
+
+  // Working hours stored as a JSON string.
+  // Expected format: {"mon":["09:00","17:00"],"tue":["09:00","17:00"],...}
+  $fields['adviser_hours'] = BaseFieldDefinition::create('string_long')
+    ->setLabel(t('Working hours'))
+    ->setDescription(t('JSON schedule keyed by 3-letter day code. Example: {"mon":["09:00","17:00"]}.'))
+    ->setDisplayOptions('form', [
+      'type' => 'string_textarea',
+      'settings' => ['rows' => 4],
+      'weight' => 6,
+    ])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', [
+      'label' => 'above',
+      'type' => 'basic_string',
+      'weight' => 6,
+    ])
+    ->setDisplayConfigurable('view', TRUE);
+
+  // Specializations — multi-value reference to the appointment_type vocabulary.
+  $fields['adviser_specializations'] = BaseFieldDefinition::create('entity_reference')
+    ->setLabel(t('Specializations'))
+    ->setDescription(t('The appointment types this adviser is qualified to handle.'))
+    ->setCardinality(BaseFieldDefinition::CARDINALITY_UNLIMITED)
+    ->setSetting('target_type', 'taxonomy_term')
+    ->setSetting('handler', 'default:taxonomy_term')
+    ->setSetting('handler_settings', [
+      'target_bundles' => ['appointment_type' => 'appointment_type'],
+      'sort' => ['field' => 'name', 'direction' => 'ASC'],
+    ])
+    ->setDisplayOptions('form', [
+      'type' => 'options_buttons',
+      'weight' => 7,
+    ])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', [
+      'label' => 'above',
+      'type' => 'entity_reference_label',
+      'weight' => 7,
+    ])
+    ->setDisplayConfigurable('view', TRUE);
+
+  return $fields;
+}
+
+/**
+ * Implements hook_mail().
+ *
+ * Defines email templates for booking lifecycle events.
+ * Subjects and bodies can be overridden via the settings form.
+ */
+function appointment_mail(string $key, array &$message, array $params): void {
+  $options = ['langcode' => $message['langcode']];
+  $placeholders = $params['params'];
+
+  switch ($key) {
+    case 'booking_confirm_customer':
+      $message['subject'] = t('Appointment confirmed [@reference]', $placeholders, $options);
+      $message['body'][]  = t("Hello @name,\n\nYour appointment has been confirmed.\n\nReference: @reference\nDate: @date\nAgency: @agency\nAdviser: @adviser\nType: @type\n\nThank you.", $placeholders, $options);
+      break;
+
+    case 'booking_confirm_adviser':
+      $message['subject'] = t('New Appointment: @reference', $placeholders, $options);
+      $message['body'][]  = t("Hello @adviser,\n\nA new appointment has been booked with you.\n\nReference: @reference\nCustomer: @name\nDate: @date\nType: @type\nNotes: @notes", $placeholders, $options);
+      break;
+
+    case 'booking_modified_customer':
+      $message['subject'] = t('Appointment updated [@reference]', $placeholders, $options);
+      $message['body'][]  = t("Hello @name,\n\nYour appointment has been updated.\n\nReference: @reference\nNew date: @date\nAgency: @agency\nAdviser: @adviser\n\nThank you.", $placeholders, $options);
+      break;
+
+    case 'booking_modified_adviser':
+      $message['subject'] = t('Appointment Modified: @reference', $placeholders, $options);
+      $message['body'][]  = t("Hello @adviser,\n\nOne of your appointments has been modified.\n\nReference: @reference\nCustomer: @name\nNew Date: @date\nNew Notes: @notes", $placeholders, $options);
+      break;
+
+    case 'booking_cancelled_customer':
+      $message['subject'] = t('Appointment cancelled [@reference]', $placeholders, $options);
+      $message['body'][]  = t("Hello @name,\n\nYour appointment (@reference) on @date has been cancelled.\n\nIf you wish to rebook, please visit our website.\n\nThank you.", $placeholders, $options);
+      break;
+
+    case 'booking_cancelled_adviser':
+      $message['subject'] = t('Appointment Cancelled: @reference', $placeholders, $options);
+      $message['body'][]  = t("Hello @adviser,\n\nAn appointment booked with you has been cancelled.\n\nReference: @reference\nCustomer: @name\nOriginal Date: @date", $placeholders, $options);
+      break;
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_insert() for appointment entities.
+ *
+ * Enqueues a confirmation email when a new appointment is created.
+ */
+function appointment_appointment_insert(\Drupal\Core\Entity\EntityInterface $entity): void {
+  $status = $entity->get('appointment_status')->value ?? '';
+  if (in_array($status, ['pending', 'confirmed'], TRUE)) {
+    \Drupal::service('appointment.email')->enqueueEmail($entity, 'confirmation');
+    _appointment_trigger_email_cron();
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_update() for appointment entities.
+ *
+ * Enqueues modification or cancellation emails when the status changes.
+ */
+function appointment_appointment_update(\Drupal\Core\Entity\EntityInterface $entity): void {
+  $newStatus  = $entity->get('appointment_status')->value ?? '';
+  $prevStatus = $entity->original?->get('appointment_status')->value ?? '';
+
+  if ($newStatus === $prevStatus) {
+    return;
+  }
+
+  $emailService = \Drupal::service('appointment.email');
+
+  if ($newStatus === 'cancelled') {
+    $emailService->enqueueEmail($entity, 'cancellation');
+  }
+  else {
+    $emailService->enqueueEmail($entity, 'modification');
+  }
+  _appointment_trigger_email_cron();
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for user_form.
+ *
+ * Replaces the raw JSON textarea for adviser_hours with a structured widget.
+ */
+function appointment_form_user_form_alter(array &$form, FormStateInterface $form_state, string $form_id): void {
+  if (!isset($form['adviser_hours'])) {
+    return;
+  }
+
+  // Hide the original raw field.
+  $form['adviser_hours']['#access'] = FALSE;
+
+  /** @var \Drupal\user\UserInterface $user */
+  $user = $form_state->getFormObject()->getEntity();
+  $stored = $user->get('adviser_hours')->value ?? '{}';
+  $schedule = json_decode($stored, TRUE) ?? [];
+
+  $form['hours_widget'] = [
+    '#type'        => 'details',
+    '#title'       => t('Working hours'),
+    '#open'        => TRUE,
+    '#description' => t('Select the opening and closing times for each working day. Leave a day unchecked if you are unavailable that day.'),
+    '#tree'        => TRUE,
+    '#weight'      => $form['adviser_hours']['#weight'] ?? 5,
+    '#attached'    => ['library' => ['appointment/booking-wizard']],
+  ];
+
+  $days = [
+    'mon' => 'Monday', 'tue' => 'Tuesday', 'wed' => 'Wednesday',
+    'thu' => 'Thursday', 'fri' => 'Friday', 'sat' => 'Saturday', 'sun' => 'Sunday',
+  ];
+
+  $timeOptions = [];
+  for ($h = 0; $h < 24; $h++) {
+    foreach ([0, 30] as $m) {
+      $time = sprintf('%02d:%02d', $h, $m);
+      $timeOptions[$time] = $time;
+    }
+  }
+
+  foreach ($days as $key => $label) {
+    $dayData  = $schedule[$key] ?? NULL;
+    $isOpen   = !empty($dayData);
+    $openTime = $dayData[0] ?? '09:00';
+    $closeTime = $dayData[1] ?? '17:00';
+
+    $form['hours_widget'][$key] = [
+      '#type'       => 'fieldset',
+      '#title'      => t($label),
+      '#attributes' => ['class' => ['hours-day-row']],
+    ];
+
+    $form['hours_widget'][$key]['open'] = [
+      '#type'          => 'checkbox',
+      '#title'         => t('Available'),
+      '#default_value' => $isOpen ? 1 : 0,
+    ];
+
+    $form['hours_widget'][$key]['start'] = [
+      '#type'          => 'select',
+      '#title'         => t('From'),
+      '#options'       => $timeOptions,
+      '#default_value' => $openTime,
+      '#states'        => [
+        'visible' => [
+          ':input[name="hours_widget[' . $key . '][open]"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+
+    $form['hours_widget'][$key]['end'] = [
+      '#type'          => 'select',
+      '#title'         => t('To'),
+      '#options'       => $timeOptions,
+      '#default_value' => $closeTime,
+      '#states'        => [
+        'visible' => [
+          ':input[name="hours_widget[' . $key . '][open]"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+  }
+
+  $form['#validate'][] = 'appointment_user_hours_validate';
+  $form['#entity_builders'][] = 'appointment_user_hours_builder';
+}
+
+/**
+ * Validation callback for the adviser_hours widget.
+ */
+function appointment_user_hours_validate(array &$form, FormStateInterface $form_state): void {
+  $widget = $form_state->getValue('hours_widget') ?? [];
+  $days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+  foreach ($days as $key) {
+    $day = $widget[$key] ?? [];
+    if (!empty($day['open'])) {
+      if (($day['start'] ?? '') >= ($day['end'] ?? '')) {
+        $form_state->setErrorByName(
+          "hours_widget][{$key}][end",
+          t('Closing time must be later than opening time.')
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Entity builder callback to serialise the widget back to JSON before save.
+ */
+function appointment_user_hours_builder(string $entity_type, \Drupal\Core\Entity\EntityInterface $entity, array &$form, FormStateInterface $form_state): void {
+  $widget = $form_state->getValue('hours_widget') ?? [];
+  $schedule = [];
+  $days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+  foreach ($days as $key) {
+    $day = $widget[$key] ?? [];
+    if (!empty($day['open'])) {
+      $schedule[$key] = [$day['start'], $day['end']];
+    }
+  }
+
+  $entity->set('adviser_hours', json_encode($schedule));
+}
+
+/**
+ * Implements hook_form_views_exposed_form_alter().
+ *
+ * This hook converts the Agency and Adviser autocomplete text fields into
+ * user-friendly dropdowns in the administration view.
+ */
+function appointment_form_views_exposed_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  $view = $form_state->get('view');
+
+  // Verify that we are targetting the administrative appointments view.
+  if ($view->id() === 'appointments_admin') {
+
+    // 1. Convert the Agency filter to a dropdown.
+    $agency_key = 'agency'; 
+    if (isset($form[$agency_key])) {
+      $agencies = \Drupal::entityTypeManager()->getStorage('appointment_agency')->loadMultiple();
+      $agency_options = ['' => t('- Any Agency -')];
+      foreach ($agencies as $agency) {
+        $agency_options[$agency->id()] = $agency->label();
+      }
+      
+      $form[$agency_key]['#type'] = 'select';
+      $form[$agency_key]['#options'] = $agency_options;
+      $form[$agency_key]['#size'] = 1;
+      $form[$agency_key]['#multiple'] = FALSE;
+      $form[$agency_key]['#validated'] = TRUE;
+      
+      if (empty($form_state->getUserInput()[$agency_key])) {
+        $form[$agency_key]['#default_value'] = '';
+      }
+    }
+
+    // 2. Convert the Adviser filter to a dropdown.
+    $adviser_key = 'adviser';
+    if (isset($form[$adviser_key])) {
+      $adviser_ids = \Drupal::entityQuery('user')
+        ->condition('status', 1)
+        ->condition('roles', 'adviser')
+        ->accessCheck(FALSE)
+        ->execute();
+      $advisers = User::loadMultiple($adviser_ids);
+      $adviser_options = ['' => t('- Any Adviser -')];
+      foreach ($advisers as $adviser) {
+        $adviser_options[$adviser->id()] = $adviser->getDisplayName();
+      }
+      
+      $form[$adviser_key]['#type'] = 'select';
+      $form[$adviser_key]['#options'] = $adviser_options;
+      $form[$adviser_key]['#size'] = 1;
+      $form[$adviser_key]['#multiple'] = FALSE;
+      $form[$adviser_key]['#validated'] = TRUE;
+      
+      if (empty($form_state->getUserInput()[$adviser_key])) {
+        $form[$adviser_key]['#default_value'] = '';
+      }
+    }
+
+    // 3. Convert any Date-related filter to a Date Picker.
+    // We use the 'Attribute-Only' approach here. By keeping the #type as textfield
+    // but adding the 'date' HTML attribute, we ensure the browser shows a calendar
+    // while keeping the data format compatible with the Views query engine.
+    foreach ($form as $key => &$element) {
+      if (str_contains($key, 'appointment_date')) {
+        // Check if it is a field and not a container.
+        if (isset($element['#type'])) {
+          $element['#attributes']['type'] = 'date';
+          $element['#attributes']['class'][] = 'appointment-date-filter';
+          // Ensure we don't have a fixed size that might hide the calendar icon.
+          unset($element['#size']);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Helper to trigger the specific queue worker immediately.
+ */
+function _appointment_trigger_email_cron(): void {
+  $queue = \Drupal::queue('appointment_email_queue');
+  /** @var \Drupal\Core\Queue\QueueWorkerInterface $worker */
+  $worker = \Drupal::service('plugin.manager.queue_worker')->createInstance('appointment_email_queue');
+
+  // Process all pending items in the queue right now.
+  while ($item = $queue->claimItem()) {
+    try {
+      $worker->processItem($item->data);
+      $queue->deleteItem($item);
+    }
+    catch (\Exception $e) {
+      // If processing fails, release the item back to the queue for retry.
+      $queue->releaseItem($item);
+      \Drupal::logger('appointment')->error('Failed to process email queue item: @message', [
+        '@message' => $e->getMessage(),
+      ]);
+      break;
+    }
+  }
+}

@@ -1,0 +1,247 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the Appointment module.
+ */
+
+use Drupal\Core\Field\BaseFieldDefinition;
+
+/**
+ * Adds Phase 1 fields to the appointment entity.
+ *
+ * Run: drush updb
+ */
+function appointment_update_10001(array &$sandbox): void {
+  $entity_definition_update_manager = \Drupal::entityDefinitionUpdateManager();
+
+  // appointment_date.
+  $field = BaseFieldDefinition::create('datetime')
+    ->setRevisionable(TRUE)
+    ->setLabel(t('Appointment date'))
+    ->setDescription(t('The date and time of the appointment (stored in UTC).'))
+    ->setRequired(TRUE)
+    ->setSetting('datetime_type', 'datetime')
+    ->setDisplayOptions('form', ['type' => 'datetime_default', 'weight' => 1])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', ['label' => 'above', 'type' => 'datetime_default', 'weight' => 1])
+    ->setDisplayConfigurable('view', TRUE);
+  $entity_definition_update_manager->installFieldStorageDefinition('appointment_date', 'appointment', 'appointment', $field);
+
+  // appointment_status.
+  $field = BaseFieldDefinition::create('list_string')
+    ->setRevisionable(TRUE)
+    ->setLabel(t('Appointment status'))
+    ->setDescription(t('The current status of the appointment.'))
+    ->setRequired(TRUE)
+    ->setSetting('allowed_values', [
+      'pending'   => 'Pending',
+      'confirmed' => 'Confirmed',
+      'cancelled' => 'Cancelled',
+    ])
+    ->setDefaultValue('pending')
+    ->setDisplayOptions('form', ['type' => 'options_select', 'weight' => 2])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', ['label' => 'above', 'type' => 'list_default', 'weight' => 2])
+    ->setDisplayConfigurable('view', TRUE);
+  $entity_definition_update_manager->installFieldStorageDefinition('appointment_status', 'appointment', 'appointment', $field);
+
+  // customer_name.
+  $field = BaseFieldDefinition::create('string')
+    ->setRevisionable(TRUE)
+    ->setLabel(t('Customer name'))
+    ->setDescription(t('The full name of the customer.'))
+    ->setRequired(TRUE)
+    ->setSetting('max_length', 255)
+    ->setDisplayOptions('form', ['type' => 'string_textfield', 'weight' => 3])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', ['label' => 'above', 'type' => 'string', 'weight' => 3])
+    ->setDisplayConfigurable('view', TRUE);
+  $entity_definition_update_manager->installFieldStorageDefinition('customer_name', 'appointment', 'appointment', $field);
+
+  // customer_email.
+  $field = BaseFieldDefinition::create('email')
+    ->setRevisionable(TRUE)
+    ->setLabel(t('Customer email'))
+    ->setDescription(t('The email address of the customer.'))
+    ->setRequired(TRUE)
+    ->setDisplayOptions('form', ['type' => 'email_default', 'weight' => 4])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', ['label' => 'above', 'type' => 'email_mailto', 'weight' => 4])
+    ->setDisplayConfigurable('view', TRUE);
+  $entity_definition_update_manager->installFieldStorageDefinition('customer_email', 'appointment', 'appointment', $field);
+
+  // customer_phone.
+  $field = BaseFieldDefinition::create('telephone')
+    ->setRevisionable(TRUE)
+    ->setLabel(t('Customer phone'))
+    ->setDescription(t('The phone number of the customer.'))
+    ->setRequired(TRUE)
+    ->setDisplayOptions('form', ['type' => 'telephone_default', 'weight' => 5])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', ['label' => 'above', 'type' => 'telephone_link', 'weight' => 5])
+    ->setDisplayConfigurable('view', TRUE);
+  $entity_definition_update_manager->installFieldStorageDefinition('customer_phone', 'appointment', 'appointment', $field);
+
+  // notes.
+  $field = BaseFieldDefinition::create('text_long')
+    ->setRevisionable(TRUE)
+    ->setTranslatable(TRUE)
+    ->setLabel(t('Notes'))
+    ->setDescription(t('Internal notes or special requests from the customer.'))
+    ->setDisplayOptions('form', ['type' => 'text_textarea', 'weight' => 6])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', ['type' => 'text_default', 'label' => 'above', 'weight' => 6])
+    ->setDisplayConfigurable('view', TRUE);
+  $entity_definition_update_manager->installFieldStorageDefinition('notes', 'appointment', 'appointment', $field);
+
+  // agency reference.
+  $field = BaseFieldDefinition::create('entity_reference')
+    ->setRevisionable(TRUE)
+    ->setLabel(t('Agency'))
+    ->setDescription(t('The agency where the appointment takes place.'))
+    ->setRequired(TRUE)
+    ->setSetting('target_type', 'appointment_agency')
+    ->setDisplayOptions('form', ['type' => 'entity_reference_autocomplete', 'weight' => 7])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', ['label' => 'above', 'type' => 'entity_reference_label', 'weight' => 7])
+    ->setDisplayConfigurable('view', TRUE);
+  $entity_definition_update_manager->installFieldStorageDefinition('agency', 'appointment', 'appointment', $field);
+
+  // adviser reference.
+  $field = BaseFieldDefinition::create('entity_reference')
+    ->setRevisionable(TRUE)
+    ->setLabel(t('Adviser'))
+    ->setDescription(t('The adviser assigned to this appointment.'))
+    ->setRequired(TRUE)
+    ->setSetting('target_type', 'user')
+    ->setDisplayOptions('form', ['type' => 'entity_reference_autocomplete', 'weight' => 8])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', ['label' => 'above', 'type' => 'entity_reference_label', 'weight' => 8])
+    ->setDisplayConfigurable('view', TRUE);
+  $entity_definition_update_manager->installFieldStorageDefinition('adviser', 'appointment', 'appointment', $field);
+
+  // appointment_type taxonomy reference.
+  $field = BaseFieldDefinition::create('entity_reference')
+    ->setRevisionable(TRUE)
+    ->setLabel(t('Appointment type'))
+    ->setDescription(t('The specialization or type of service requested.'))
+    ->setRequired(TRUE)
+    ->setSetting('target_type', 'taxonomy_term')
+    ->setSetting('handler', 'default:taxonomy_term')
+    ->setSetting('handler_settings', ['target_bundles' => ['appointment_type' => 'appointment_type']])
+    ->setDisplayOptions('form', ['type' => 'options_select', 'weight' => 9])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', ['label' => 'above', 'type' => 'entity_reference_label', 'weight' => 9])
+    ->setDisplayConfigurable('view', TRUE);
+  $entity_definition_update_manager->installFieldStorageDefinition('appointment_type', 'appointment', 'appointment', $field);
+}
+
+/**
+ * Adds Phase 1 fields to the appointment_agency entity.
+ *
+ * Run: drush updb
+ */
+function appointment_update_10002(array &$sandbox): void {
+  $entity_definition_update_manager = \Drupal::entityDefinitionUpdateManager();
+
+  // address.
+  $field = BaseFieldDefinition::create('string_long')
+    ->setRevisionable(TRUE)
+    ->setTranslatable(TRUE)
+    ->setLabel(t('Address'))
+    ->setDescription(t('The physical address of the agency.'))
+    ->setRequired(TRUE)
+    ->setDisplayOptions('form', ['type' => 'string_textarea', 'weight' => 1, 'settings' => ['rows' => 3]])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', ['label' => 'above', 'type' => 'basic_string', 'weight' => 1])
+    ->setDisplayConfigurable('view', TRUE);
+  $entity_definition_update_manager->installFieldStorageDefinition('address', 'appointment_agency', 'appointment', $field);
+
+  // phone.
+  $field = BaseFieldDefinition::create('telephone')
+    ->setRevisionable(TRUE)
+    ->setLabel(t('Phone'))
+    ->setDescription(t('The main phone number of the agency.'))
+    ->setRequired(TRUE)
+    ->setDisplayOptions('form', ['type' => 'telephone_default', 'weight' => 2])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', ['label' => 'above', 'type' => 'telephone_link', 'weight' => 2])
+    ->setDisplayConfigurable('view', TRUE);
+  $entity_definition_update_manager->installFieldStorageDefinition('phone', 'appointment_agency', 'appointment', $field);
+
+  // email.
+  $field = BaseFieldDefinition::create('email')
+    ->setRevisionable(TRUE)
+    ->setLabel(t('Email'))
+    ->setDescription(t('The contact email address of the agency.'))
+    ->setRequired(TRUE)
+    ->setDisplayOptions('form', ['type' => 'email_default', 'weight' => 3])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', ['label' => 'above', 'type' => 'email_mailto', 'weight' => 3])
+    ->setDisplayConfigurable('view', TRUE);
+  $entity_definition_update_manager->installFieldStorageDefinition('email', 'appointment_agency', 'appointment', $field);
+
+  // operating_hours.
+  $field = BaseFieldDefinition::create('string_long')
+    ->setRevisionable(TRUE)
+    ->setTranslatable(TRUE)
+    ->setLabel(t('Operating hours'))
+    ->setDescription(t('The opening hours of the agency as a JSON schedule. Example: {"mon":["09:00","17:00"]}.'))
+    ->setDisplayOptions('form', ['type' => 'string_textarea', 'weight' => 4, 'settings' => ['rows' => 4]])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', ['label' => 'above', 'type' => 'basic_string', 'weight' => 4])
+    ->setDisplayConfigurable('view', TRUE);
+  $entity_definition_update_manager->installFieldStorageDefinition('operating_hours', 'appointment_agency', 'appointment', $field);
+}
+
+/**
+ * Adds adviser-specific fields to the User entity.
+ *
+ * Run: drush updb
+ */
+function appointment_update_10003(array &$sandbox): void {
+  $entity_definition_update_manager = \Drupal::entityDefinitionUpdateManager();
+
+  // adviser_agency — reference to the appointment_agency entity.
+  $field = BaseFieldDefinition::create('entity_reference')
+    ->setLabel(t('Agency'))
+    ->setDescription(t('The agency this adviser belongs to.'))
+    ->setSetting('target_type', 'appointment_agency')
+    ->setDisplayOptions('form', [
+      'type' => 'entity_reference_autocomplete',
+      'settings' => ['match_operator' => 'CONTAINS', 'size' => 60, 'placeholder' => ''],
+      'weight' => 5,
+    ])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', ['label' => 'above', 'type' => 'entity_reference_label', 'weight' => 5])
+    ->setDisplayConfigurable('view', TRUE);
+  $entity_definition_update_manager->installFieldStorageDefinition('adviser_agency', 'user', 'appointment', $field);
+
+  // adviser_hours — JSON working-hours schedule.
+  $field = BaseFieldDefinition::create('string_long')
+    ->setLabel(t('Working hours'))
+    ->setDescription(t('JSON schedule keyed by 3-letter day code. Example: {"mon":["09:00","17:00"]}.'))
+    ->setDisplayOptions('form', ['type' => 'string_textarea', 'settings' => ['rows' => 4], 'weight' => 6])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', ['label' => 'above', 'type' => 'basic_string', 'weight' => 6])
+    ->setDisplayConfigurable('view', TRUE);
+  $entity_definition_update_manager->installFieldStorageDefinition('adviser_hours', 'user', 'appointment', $field);
+
+  // adviser_specializations — multi-value taxonomy reference.
+  $field = BaseFieldDefinition::create('entity_reference')
+    ->setLabel(t('Specializations'))
+    ->setDescription(t('The appointment types this adviser is qualified to handle.'))
+    ->setCardinality(BaseFieldDefinition::CARDINALITY_UNLIMITED)
+    ->setSetting('target_type', 'taxonomy_term')
+    ->setSetting('handler', 'default:taxonomy_term')
+    ->setSetting('handler_settings', [
+      'target_bundles' => ['appointment_type' => 'appointment_type'],
+      'sort' => ['field' => 'name', 'direction' => 'ASC'],
+    ])
+    ->setDisplayOptions('form', ['type' => 'options_buttons', 'weight' => 7])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', ['label' => 'above', 'type' => 'entity_reference_label', 'weight' => 7])
+    ->setDisplayConfigurable('view', TRUE);
+  $entity_definition_update_manager->installFieldStorageDefinition('adviser_specializations', 'user', 'appointment', $field);
+}

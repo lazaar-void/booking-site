@@ -1,0 +1,45 @@
+{#
+/**
+ * @file
+ * Template for the user's appointment dashboard.
+ *
+ * Available variables:
+ * - appointments: array of Appointment entities.
+ */
+#}
+<div class="my-appointments-page">
+  <h1>{{ 'My appointments'|t }}</h1>
+
+  {% if appointments is empty %}
+    <p class="appointment-empty">
+      {{ 'You have no appointments yet.'|t }}
+      <a href="{{ path('appointment.booking_wizard') }}">{{ 'Book your first appointment'|t }}</a>.
+    </p>
+  {% else %}
+    <div class="my-appointments-list">
+      {% for appointment in appointments %}
+        {% set status = appointment.appointment_status.value %}
+        <div class="appointment-card">
+          <div>
+            <div class="appointment-card__ref">{{ appointment.label.value }}</div>
+            <div class="appointment-card__meta">
+              {{ appointment.appointment_date.value|date('d/m/Y H:i') }}
+              &mdash;
+              <span class="status--{{ status }}">{{ status|capitalize }}</span>
+            </div>
+          </div>
+          <div class="appointment-card__actions">
+            {% if status != 'cancelled' %}
+              <a href="{{ path('appointment.modify_lookup') }}?ref={{ appointment.label.value }}&email={{ appointment.customer_email.value }}" class="btn-primary">
+                {{ 'Edit'|t }}
+              </a>
+              <a href="{{ path('appointment.cancel', {'appointment': appointment.id()}) }}" class="btn-back">
+                {{ 'Cancel'|t }}
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
