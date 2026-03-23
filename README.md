@@ -1,43 +1,127 @@
 # Appointment Booking Module
 
-The **Appointment** module provides a professional, end-to-end appointment booking system for Drupal 10/11. It allows customers to book appointments with specialized advisers at different branch locations (agencies) through a modern, interactive multi-step wizard.
+A comprehensive **appointment booking system** for Drupal 10/11. Customers book appointments with specialised advisers at agency branches through an interactive 6-step wizard powered by FullCalendar.
 
-## Key Features
+## Features
 
-- **6-Step Booking Wizard**: A guided user experience at `/book-an-appointment`.
-- **FullCalendar Integration**: Interactive date and time slot selection with real-time availability.
-- **Agency Management**: Custom entities to manage branch locations, contact info, and operating hours.
-- **Adviser Profiles**: Extended user profiles with agency assignment, working hours, and specializations.
-- **CSV Import Tool**: Bulk import agencies and advisers at `/admin/config/appointment/import`.
-- **Admin Dashboard**: Centralized management at `/admin/structure/appointment` with list, settings, and field management tabs.
-- **Transactional Emails**: Automatic notifications for booking confirmation, modification, and cancellation via Queue API.
+| Category | Details |
+|----------|---------|
+| **Booking Wizard** | 6-step guided form at `/book-an-appointment` with AJAX navigation and TempStore state |
+| **Calendar** | FullCalendar v6 TimeGrid for interactive date/time slot selection with live availability |
+| **Entities** | Two custom content entities: **Agency** and **Appointment** (revisionable, publishable) |
+| **Adviser Profiles** | Extended User entity with agency assignment, JSON working hours, and taxonomy specialisations |
+| **Slot Engine** | Calculates availability from adviser hours, subtracts existing bookings, prevents double-booking |
+| **Email Notifications** | Confirmation, modification, and cancellation emails to both customer and adviser via Queue API |
+| **User Dashboard** | `/my-appointments` — view, edit, and cancel bookings |
+| **Admin Dashboard** | Views-based listing at `/admin/structure/appointment` with filters, bulk actions, and CSV export |
+| **CSV Import** | Bulk import agencies and advisers at `/admin/config/appointment/import` |
+| **CTA Block** | "Book an Appointment" block plugin for placement anywhere on the site |
+| **Modification Flow** | 3-step lookup → verify → edit flow for appointment modification |
+| **Cancellation** | Confirmation form with ownership check and soft-delete |
 
 ## Requirements
 
-- Drupal 10.x or 11.x
-- PHP 8.1+
-- Core modules: `datetime`, `telephone`, `taxonomy`, `user`, `file`
-- Vendor libraries: `league/csv`
+- **Drupal** 10.x or 11.x
+- **PHP** 8.1+
+- **Core modules:** `datetime`, `telephone`, `taxonomy`, `user`, `file`
+- **Composer:** `league/csv` (`composer require league/csv`)
 
 ## Installation
 
-1. Copy the `appointment` module into your `modules/custom` directory.
-2. Enable the module via Drush: `drush en appointment` or through the Extend menu.
-3. The module automatically creates two entities (`appointment_agency` and `appointment`) and adds fields to the User entity.
+```bash
+# 1. Copy module to modules/custom/
+cp -r appointment/ /path/to/site/web/modules/custom/
 
-## Configuration
+# 2. Install the dependency
+composer require league/csv
 
-1. **Taxonomy**: Add terms to the `appointment_type` vocabulary (e.g., Financial Advice, Legal Consultation).
-2. **Agencies**: Create your branch locations at `/agency/add` or use the CSV Import tool.
-3. **Advisers**: Assign the `adviser` role to relevant users and configure their working hours and agency in their user profile.
-4. **Settings**: Configure the default slot duration (e.g., 30 minutes) at `/admin/structure/appointment/settings`.
+# 3. Enable the module
+drush en appointment -y
 
-## Usage
+# 4. Run database updates (creates entity schemas and user fields)
+drush updb -y
 
-- **Customers**: Visit `/book-an-appointment` to start a booking.
-- **Logged-in Users**: View their personal bookings at `/my-appointments`.
-- **Administrators**: Manage all bookings and system settings at `/admin/structure/appointment`.
+# 5. Clear cache
+drush cr
+```
 
-## Support
+## Initial Configuration
 
-For technical details, see the `DOCUMENTATION.md` and `IMPLEMENTATION_DOC.md` files in the module directory.
+1. **Create the `adviser` role** at `/admin/people/roles` (if not auto-created)
+2. **Add appointment types** at `/admin/structure/taxonomy/manage/appointment_type/overview`
+   (e.g., Financial Advice, Legal Consultation, Career Counseling)
+3. **Create agencies** at `/agency/add` or bulk import via `/admin/config/appointment/import`
+4. **Create adviser users** — assign the `adviser` role, then set their agency, working hours, and specialisations on their user profile
+5. **Configure slot duration** at `/admin/structure/appointment/settings` (default: 30 min)
+
+## Quick Start
+
+| Who | URL | What |
+|-----|-----|------|
+| Customer | `/book-an-appointment` | Start the booking wizard |
+| Logged-in user | `/my-appointments` | View/edit/cancel bookings |
+| Anyone | `/appointment/modify` | Modify a booking by reference + email |
+| Admin | `/admin/structure/appointment` | Manage all appointments |
+| Admin | `/admin/content/agency` | Manage agencies |
+| Admin | `/admin/config/appointment/import` | CSV import tool |
+
+## Module Structure
+
+```
+appointment/
+├── config/install/          # Bulk action configs (auto-imported on install)
+├── css/appointment.css      # Wizard, dashboard, and hours widget styles
+├── js/
+│   ├── appointment.js       # Legacy slot loader (fallback)
+│   └── appointment-calendar.js  # FullCalendar integration
+├── scripts/
+│   └── generate_appointments.php  # Performance test: generates 1000 appointments
+├── src/
+│   ├── Controller/AppointmentController.php
+│   ├── Entity/
+│   │   ├── Agency.php
+│   │   └── Appointment.php
+│   ├── Form/
+│   │   ├── AgencyForm.php             # Operating hours widget
+│   │   ├── AppointmentSubmitForm.php   # 6-step booking wizard
+│   │   ├── AppointmentCancelForm.php   # Cancel confirmation
+│   │   ├── AppointmentLookupForm.php   # Modification step 1
+│   │   ├── AppointmentVerifyForm.php   # Modification step 2
+│   │   ├── AppointmentModifyForm.php   # Modification step 3
+│   │   └── ImportCsvForm.php           # CSV import UI
+│   ├── Plugin/
+│   │   ├── Block/AppointmentBlock.php  # CTA block
+│   │   └── QueueWorker/AppointmentEmailWorker.php
+│   └── Service/
+│       ├── AppointmentManagerService.php  # Slot engine + entity ops
+│       ├── CsvImporter.php                # CSV parsing
+│       └── EmailService.php               # Email dispatch
+├── templates/               # Twig templates
+├── appointment.module       # Hooks (theme, mail, form alter, entity hooks)
+├── appointment.routing.yml  # All routes
+├── appointment.services.yml # DI service definitions
+└── appointment.permissions.yml
+```
+
+## CSV Import Format
+
+**Agencies** — `Name, Address, Phone, Email, Operating Hours`
+```csv
+"Central Branch","123 Main St, NYC","555-0101",central@example.com,"{""mon"":[""09:00"",""17:00""],""fri"":[""09:00"",""16:00""]}"
+```
+
+**Advisers** — `Username, Email, Password, Agency Name, Working Hours, Specializations`
+```csv
+"jdoe","jdoe@example.com","pass123","Central Branch","{""mon"":[""09:00"",""12:00""]}","Financial Advice, Tax Planning"
+```
+
+> **Import order:** Agencies first, then Advisers (advisers reference agencies by name).
+
+## Documentation
+
+- **[DOCUMENTATION.md](DOCUMENTATION.md)** — Full technical reference (entities, services, hooks, routing, permissions, templates)
+- **[IMPLEMENTATION_DOC.md](IMPLEMENTATION_DOC.md)** — Architecture overview and implementation details
+
+## License
+
+This module is developed as part of a university project.

@@ -3,7 +3,7 @@
 > **Module:** `appointment`
 > **Drupal version:** 10 / 11
 > **Author:** Hamza Bahlaouane
-> **Date:** March 2025
+> **Date:** March 2026
 
 ---
 
@@ -116,7 +116,12 @@ web/modules/custom/appointment/
 ├── css/
 │   └── appointment.css
 ├── js/
-│   └── appointment.js
+│   ├── appointment.js              ← legacy fallback slot loader
+│   └── appointment-calendar.js     ← FullCalendar v6 integration
+├── sample_data/
+│   └── agencies.csv                ← sample CSV for import testing
+├── scripts/
+│   └── generate_appointments.php   ← performance testing (1000 appointments)
 ├── src/
 │   ├── Controller/
 │   │   └── AppointmentController.php
@@ -124,16 +129,31 @@ web/modules/custom/appointment/
 │   │   ├── Agency.php
 │   │   └── Appointment.php
 │   ├── Form/
-│   │   ├── AgencyForm.php
+│   │   ├── AgencyForm.php              ← operating hours widget
 │   │   ├── AgencySettingsForm.php
-│   │   ├── AppointmentForm.php
+│   │   ├── AppointmentCancelForm.php   ← cancel confirmation
+│   │   ├── AppointmentForm.php         ← admin edit (with collision check)
+│   │   ├── AppointmentLookupForm.php   ← modification step 1
+│   │   ├── AppointmentModifyForm.php   ← modification step 3
 │   │   ├── AppointmentSettingsForm.php
-│   │   ├── AppointmentSubmitForm.php
+│   │   ├── AppointmentSubmitForm.php   ← 6-step booking wizard
+│   │   ├── AppointmentVerifyForm.php   ← modification step 2
 │   │   └── ImportCsvForm.php           ← CSV import UI
-│   └── Service/
-│       ├── AppointmentManagerService.php
-│       ├── CsvImporter.php             ← CSV parsing logic
-│       └── EmailService.php
+│   ├── Plugin/
+│   │   ├── Block/
+│   │   │   └── AppointmentBlock.php    ← "Book Now" CTA block
+│   │   └── QueueWorker/
+│   │       └── AppointmentEmailWorker.php ← email queue processor
+│   ├── Service/
+│   │   ├── AppointmentManagerService.php
+│   │   ├── CsvImporter.php
+│   │   └── EmailService.php
+│   ├── AgencyAccessControlHandler.php
+│   ├── AgencyInterface.php
+│   ├── AgencyListBuilder.php
+│   ├── AppointmentAccessControlHandler.php
+│   ├── AppointmentInterface.php
+│   └── AppointmentListBuilder.php
 ├── templates/
 │   ├── appointment.html.twig
 │   ├── appointment-agency.html.twig
@@ -272,12 +292,15 @@ getAdviserOptions(int $agencyId, int $typeTermId): array  // Filtered by agency 
 
 // Slot engine
 getAvailableSlots(int $adviserId, string $date): string[] // Returns ['09:00','09:30',...]
-isSlotAvailable(int $adviserId, DateTimeImmutable $slot): bool
+isSlotAvailable(int $adviserId, DateTimeImmutable $slot, ?int $excludeId = NULL): bool
 
 // Entity mutations
-createAppointment(array $data): object  // Throws RuntimeException on collision
+createAppointment(array $data): object  // Throws RuntimeException on collision or past slot
 cancelAppointment(object $appointment): void
 generateReference(): string             // APP-YYYYMMDD-XXXXXX
+
+// Lookup
+findByReferenceAndEmail(string $reference, string $email): ?object
 ```
 
 **Slot engine logic:**
@@ -286,8 +309,9 @@ generateReference(): string             // APP-YYYYMMDD-XXXXXX
 2. Map PHP day name (`Mon`, `Tue`, …) to JSON key (`mon`, `tue`, …).
 3. Parse `[startTime, endTime]` for the requested day.
 4. Generate all theoretical slots at `slot_duration_minutes` intervals.
-5. Query existing non-cancelled appointments for that adviser + date.
-6. Return the difference (free slots only).
+5. **Filter out past time slots** (only future slots are returned).
+6. Query existing non-cancelled appointments for that adviser + date.
+7. Return the difference (free slots only).
 
 ### 6.2 EmailService
 
@@ -296,19 +320,22 @@ generateReference(): string             // APP-YYYYMMDD-XXXXXX
 
 **Dependencies injected:**
 - `plugin.manager.mail`
+- `entity_type.manager`
 - `config.factory`
 - `logger.channel.appointment`
 - `language_manager`
+- `queue` (QueueFactory)
 
 **Public API:**
 
 ```php
-sendConfirmation(object $appointment): void
-sendModification(object $appointment): void
-sendCancellation(object $appointment): void
+enqueueEmail(object $appointment, string $type): void  // Adds to queue
+sendConfirmation(object $appointment): void   // Sends to BOTH customer + adviser
+sendModification(object $appointment): void   // Sends to BOTH customer + adviser
+sendCancellation(object $appointment): void   // Sends to BOTH customer + adviser
 ```
 
-All three methods resolve to `hook_mail()` keys `booking_confirm`, `booking_modified`, `booking_cancelled` respectively. Token params built automatically from the appointment entity (loads agency/adviser/type labels). Success and failure are logged to the `appointment` channel.
+Emails are dispatched to **both the customer and the adviser** for each event. Mail keys use the `{event}_{recipient}` format (e.g., `booking_confirm_customer`, `booking_confirm_adviser`). Token params built automatically from the appointment entity.
 
 ### 6.3 CsvImporter
 
@@ -358,11 +385,36 @@ All three methods resolve to `hook_mail()` keys `booking_confirm`, `booking_modi
 - **On success:** TempStore keys cleared, success message with reference shown, redirect to `/my-appointments`.
 - **Progress bar:** Rendered as `<ol class="appointment-wizard-steps">` with CSS classes `step--done`, `step--active`, `step--pending`.
 
-### 7.2 AgencyForm / AppointmentForm
+### 7.2 AgencyForm
 
-Standard entity forms generated by the Drupal entity scaffolding system. Provide basic CRUD for admin users. Used by the admin interface at `/admin/content/agency` and `/admin/content/appointment`.
+**Class:** `Drupal\appointment\Form\AgencyForm`
 
-### 7.3 Settings Forms
+Overrides the default entity form to replace the raw JSON `operating_hours` textarea with a **structured per-day widget**: checkbox (open/closed) + start/end time selects in 30-minute increments. On save, values are serialised back to JSON. Validates that closing time > opening time.
+
+### 7.3 AppointmentForm
+
+**Class:** `Drupal\appointment\Form\AppointmentForm`
+
+Admin edit form with custom validation: checks that the appointment date is in the future and prevents double-booking (calls `isSlotAvailable()` with `$excludeId` to allow editing the same appointment).
+
+### 7.4 AppointmentCancelForm
+
+**Class:** `Drupal\appointment\Form\AppointmentCancelForm`
+**Route:** `/my-appointments/cancel/{appointment}`
+
+Extends `ConfirmFormBase`. Validates ownership (only the appointment creator can cancel), checks the appointment isn't already cancelled, then delegates to `AppointmentManagerService::cancelAppointment()` for a soft delete.
+
+### 7.5 Appointment Modification Flow (3 Forms)
+
+| Step | Form | Route | Purpose |
+|------|------|-------|---------|
+| 1 | `AppointmentLookupForm` | `/appointment/modify` | Enter reference code |
+| 2 | `AppointmentVerifyForm` | `/appointment/modify/verify` | Verify identity via email |
+| 3 | `AppointmentModifyForm` | `/appointment/modify/edit` | Edit appointment details |
+
+Uses `findByReferenceAndEmail()` from the manager service for secure lookup.
+
+### 7.6 Settings Forms
 
 | Form | Class | Route | Config object |
 |------|-------|-------|---------------|
@@ -371,7 +423,7 @@ Standard entity forms generated by the Drupal entity scaffolding system. Provide
 
 Note: The Appointment settings form is also exposed as the **Time Slot Configuration** tab on the main appointment management page (`/admin/structure/appointment`).
 
-### 7.4 ImportCsvForm
+### 7.7 ImportCsvForm
 
 **Class:** `Drupal\appointment\Form\ImportCsvForm`
 **Route:** `/admin/config/appointment/import`
@@ -394,7 +446,8 @@ Uses the `FileExtension` constraint (Drupal 11 compatible) to ensure only `.csv`
 |--------|-------|---------|
 | `bookingWizard()` | `GET /book-an-appointment` | Render array containing the wizard form |
 | `slotsJson(int $adviser_id, string $date)` | `GET /api/appointment/slots/{adviser_id}/{date}` | `JsonResponse` — `{"slots":["09:00","09:30",…]}` |
-| `myAppointments()` | `GET /my-appointments` | Render array using `appointment_my_appointments` theme hook |
+| `slotsRangeJson(Request $request, int $adviser_id)` | `GET /api/appointment/slots-range/{adviser_id}?start=…&end=…` | `JsonResponse` — FullCalendar-compatible event array |
+| `myAppointments()` | `GET /my-appointments` | Render array (with login prompt for anonymous users) |
 
 ---
 
@@ -404,11 +457,17 @@ Uses the `FileExtension` constraint (Drupal 11 compatible) to ensure only `.csv`
 
 | Route name | Path | Controller / Form | Permission |
 |-----------|------|-------------------|------------|
-| `entity.appointment.settings` | `/admin/structure/appointment` | `AppointmentSettingsForm` | `administer appointment` |
+| `entity.appointment.settings` | `/admin/structure/appointment/settings` | `AppointmentSettingsForm` | `administer appointment` |
 | `entity.appointment_agency.settings` | `/admin/structure/appointment-agency` | `AgencySettingsForm` | `administer appointment_agency` |
+| `appointment.import_csv` | `/admin/config/appointment/import` | `ImportCsvForm` | `administer appointment` |
 | `appointment.booking_wizard` | `/book-an-appointment` | `AppointmentController::bookingWizard` | `access content` |
 | `appointment.slots_json` | `/api/appointment/slots/{adviser_id}/{date}` | `AppointmentController::slotsJson` | `access content` |
-| `appointment.my_appointments` | `/my-appointments` | `AppointmentController::myAppointments` | `view own appointment` |
+| `appointment.slots_range_json` | `/api/appointment/slots-range/{adviser_id}` | `AppointmentController::slotsRangeJson` | `access content` |
+| `appointment.my_appointments` | `/my-appointments` | `AppointmentController::myAppointments` | `access content` |
+| `appointment.cancel` | `/my-appointments/cancel/{appointment}` | `AppointmentCancelForm` | logged in |
+| `appointment.modify_lookup` | `/appointment/modify` | `AppointmentLookupForm` | `access content` |
+| `appointment.modify_verify` | `/appointment/modify/verify` | `AppointmentVerifyForm` | `access content` |
+| `appointment.modify_edit` | `/appointment/modify/edit` | `AppointmentModifyForm` | `access content` |
 
 > Additional CRUD routes (add, edit, delete, canonical, collection, revisions) are **auto-generated** by `AdminHtmlRouteProvider` and `RevisionHtmlRouteProvider` for both entity types.
 
@@ -448,9 +507,14 @@ All hooks are implemented in `appointment.module`.
 | `template_preprocess_appointment()` | Prepares variables for `appointment.html.twig` |
 | `template_preprocess_appointment_agency()` | Prepares variables for `appointment-agency.html.twig` |
 | `appointment_entity_base_field_info()` | Adds `adviser_agency`, `adviser_hours`, `adviser_specializations` to the User entity |
-| `appointment_mail()` | Defines email templates for `booking_confirm`, `booking_modified`, `booking_cancelled` |
-| `appointment_appointment_insert()` | Fires `EmailService::sendConfirmation()` and processes the queue immediately for instant delivery |
-| `appointment_appointment_update()` | Fires `sendCancellation()` or `sendModification()` and processes the queue immediately |
+| `appointment_mail()` | Defines 6 email templates: `booking_confirm_customer`, `booking_confirm_adviser`, `booking_modified_customer`, `booking_modified_adviser`, `booking_cancelled_customer`, `booking_cancelled_adviser` |
+| `appointment_appointment_insert()` | Enqueues confirmation email and triggers immediate queue processing |
+| `appointment_appointment_update()` | Enqueues cancellation or modification email and triggers immediate queue processing |
+| `appointment_form_user_form_alter()` | Replaces raw JSON textarea for `adviser_hours` with structured per-day time widget |
+| `appointment_user_hours_validate()` | Validates closing time > opening time on the adviser hours widget |
+| `appointment_user_hours_builder()` | Entity builder: serialises the hours widget back to JSON before save |
+| `appointment_form_views_exposed_form_alter()` | Converts agency/adviser autocomplete filters to dropdowns and adds date pickers in the admin View |
+| `_appointment_trigger_email_cron()` | Helper: processes the email queue immediately (hybrid queue approach) |
 | `appointment_user_cancel()` | Unpublishes or anonymises appointments and agencies when a user account is cancelled |
 | `appointment_user_predelete()` | Deletes all appointments, agencies, and their revisions when a user account is deleted |
 
@@ -458,22 +522,27 @@ All hooks are implemented in `appointment.module`.
 
 ## 12. Email Notifications
 
-All emails are dispatched through Drupal's standard mail system (`plugin.manager.mail`). Three email keys are defined in `hook_mail()`:
+All emails are dispatched through Drupal's standard mail system (`plugin.manager.mail`). Six email keys are defined in `hook_mail()` — each event sends to **both customer and adviser**:
 
-| Key | Trigger | Subject template |
-|-----|---------|-----------------|
-| `booking_confirm` | New appointment inserted with status `pending`/`confirmed` | `Appointment confirmed [@reference]` |
-| `booking_modified` | `appointment_status` changes to any non-cancelled value | `Appointment updated [@reference]` |
-| `booking_cancelled` | `appointment_status` changes to `cancelled` | `Appointment cancelled [@reference]` |
+| Key | Recipient | Trigger | Subject template |
+|-----|-----------|---------|------------------|
+| `booking_confirm_customer` | Customer | New appointment created | `Appointment confirmed [@reference]` |
+| `booking_confirm_adviser` | Adviser | New appointment created | `New Appointment: @reference` |
+| `booking_modified_customer` | Customer | Status changed (non-cancel) | `Appointment updated [@reference]` |
+| `booking_modified_adviser` | Adviser | Status changed (non-cancel) | `Appointment Modified: @reference` |
+| `booking_cancelled_customer` | Customer | Status changed to `cancelled` | `Appointment cancelled [@reference]` |
+| `booking_cancelled_adviser` | Adviser | Status changed to `cancelled` | `Appointment Cancelled: @reference` |
 
-**Available body tokens:** `@name`, `@reference`, `@date`, `@agency`, `@adviser`, `@type`
+**Available body tokens:** `@name`, `@reference`, `@date`, `@agency`, `@adviser`, `@type`, `@notes`
 
-### 12.1 Immediate Queue Processing
+### 12.1 Hybrid Queue Processing
 
-To ensure a seamless user experience, the module uses a **Hybrid Queue Approach**:
-1. **Enqueuing:** Emails are first added to the `appointment_email_queue`.
-2. **Immediate Execution:** In `appointment.module`, the `_appointment_trigger_email_cron()` helper is called during entity insert/update. This manually claims and processes queue items **immediately** before the request ends.
-3. **Cron Fallback:** If the mail server is down or a timeout occurs, items remain in the queue and will be retried automatically by the standard Drupal Cron or `ultimate_cron`.
+To ensure both **performance** and **reliability**, the module uses a hybrid approach:
+
+1. **Enqueuing:** Emails are added to the `appointment_email_queue` via `EmailService::enqueueEmail()`.
+2. **Immediate Processing:** `_appointment_trigger_email_cron()` in `appointment.module` processes the queue immediately after entity insert/update — so users get instant emails.
+3. **Queue Worker:** `AppointmentEmailWorker` (a `@QueueWorker` plugin) handles items during Drupal Cron as a fallback if immediate processing fails.
+4. **Cron Fallback:** Failed items remain in the queue and are retried automatically by standard Drupal Cron or `ultimate_cron`.
 
 > For local development, configure **Mailhog** as the SMTP backend to capture outgoing emails without sending them.
 
@@ -481,7 +550,13 @@ To ensure a seamless user experience, the module uses a **Hybrid Queue Approach*
 
 ## 13. Assets (CSS / JS)
 
-**Library:** `appointment/booking-wizard` (defined in `appointment.libraries.yml`)
+**Libraries** (defined in `appointment.libraries.yml`):
+
+| Library | Purpose |
+|---------|--------|
+| `appointment/booking-wizard` | CSS + legacy slot loader JS |
+| `appointment/fullcalendar` | FullCalendar v6 CDN (external) |
+| `appointment/booking-calendar` | FullCalendar integration JS |
 
 ### CSS (`css/appointment.css`)
 
@@ -495,15 +570,21 @@ To ensure a seamless user experience, the module uses a **Hybrid Queue Approach*
 | Action buttons | `.btn-primary`, `.btn-back` | Primary (blue) and secondary (outlined) buttons |
 | Summary table | `.appointment-summary-table` | Two-column label/value table |
 | Dashboard cards | `.appointment-card`, `.status--*` | Per-appointment card with status badge |
+| Operating hours widget | `.hours-day-row` | Per-day fieldset rows for agency/adviser hours |
 
-### JS (`js/appointment.js`)
+### JS — `appointment.js` (legacy fallback)
 
-Implements a `Drupal.behaviors.appointmentWizard` that:
+Implements `Drupal.behaviors.appointmentWizard` — listens for date changes, calls the single-day JSON API, and rebuilds time slot radios. Now superseded by FullCalendar but kept as a fallback.
 
-1. Listens for changes on `#appointment-date-picker` (the date field in step 4).
-2. Reads the currently selected `adviser_id` value.
-3. Calls the JSON endpoint `/api/appointment/slots/{adviser_id}/{date}`.
-4. Rebuilds the `#time-slots-wrapper` radio list with the returned slots — **without a full page reload**.
+### JS — `appointment-calendar.js` (FullCalendar)
+
+Implements the FullCalendar v6 TimeGrid integration for Step 4:
+
+1. Initialises a FullCalendar instance in `#appointment-calendar` container.
+2. Uses the **events feed URL** `/api/appointment/slots-range/{adviser_id}?start=…&end=…` for dynamic loading.
+3. Renders available slots as green blocks with proper durations based on `slot_duration_minutes` config.
+4. On slot click, populates hidden `#selected-date` and `#selected-time` fields.
+5. Validates that selections are in the future.
 
 ---
 
@@ -633,24 +714,26 @@ Keys: `mon`, `tue`, `wed`, `thu`, `fri`, `sat`, `sun`. Value is `[startTime, end
 |------|--------|
 | FullCalendar.io v6 integration for date selection | ✅ Done |
 | Admin appointment list View with filters (date, agency, adviser) | ✅ Done |
-| CSV export with Drupal Batch API | ⬜ Pending |
 | CSV import for Agencies and Advisers | ✅ Done |
 | Email notifications via Hybrid Queue (Immediate + Cron fallback) | ✅ Done |
-| Appointment modification form (`AppointmentModifyForm`) | ✅ Done |
+| Appointment modification form (3-step: lookup → verify → edit) | ✅ Done |
 | Appointment cancellation form with confirmation | ✅ Done |
 | Module settings form (`appointment.settings` config) | ✅ Done |
+| "Book Now" CTA block plugin | ✅ Done |
+| User-friendly operating hours widget (Agency + Adviser forms) | ✅ Done |
+| Admin View exposed filter enhancements (dropdowns + date pickers) | ✅ Done |
+| Performance testing script (1000 appointments) | ✅ Done |
+| CSV sample data for testing | ✅ Done |
 
 ### 🔲 Phase 4 — Polish & Delivery (Pending)
 
 | Task | Status |
 |------|--------|
-| Input sanitisation review | ⬜ Pending |
-| CSRF and access control audit | ⬜ Pending |
-| PHPDoc / coding standards review | ⬜ Pending |
+| CSV export with Drupal Batch API | ⬜ Pending |
 | French `.po` translation file | ⬜ Pending |
-| Default content / CSV seed data for demo | ⬜ Pending |
-| Final README and installation guide | ⬜ Pending |
+| SMS notifications for reminders | ⬜ Pending |
+| Advanced role-based access for Branch Managers | ⬜ Pending |
 
 ---
 
-*Generated: March 17, 2025*
+*Last updated: March 24, 2026*
