@@ -121,7 +121,3 @@ appointment/
 
 - **[DOCUMENTATION.md](DOCUMENTATION.md)** — Full technical reference (entities, services, hooks, routing, permissions, templates)
 - **[IMPLEMENTATION_DOC.md](IMPLEMENTATION_DOC.md)** — Architecture overview and implementation details
-
-## License
-
-This module is developed as part of a university project.
