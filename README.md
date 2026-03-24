@@ -29,17 +29,22 @@ A comprehensive **appointment booking system** for Drupal 10/11. Customers book 
 ## Installation
 
 ```bash
-#clone inside modules/custom/appointment/
-cd /path/to/site/web/modules/custom/appointment/
-git clone https://github.com/lazaar-void/booking-site.git
+# 1. Navigate to the custom modules folder
+cd /path/to/site/web/modules/custom/
 
-# 2. Install the dependency
+# Clone the repository and force the folder to be named 'appointment'
+git clone https://github.com/lazaar-void/booking-site.git appointment
+
+# 2. Navigate back to your main Drupal project root
+cd /path/to/site/
+
+# Install the PHP library and Drupal dependencies
 composer require league/csv drupal/csv_serialization drupal/views_data_export
 
-# 3. Enable the module
+# 3. Enable your custom module
 drush en appointment -y
 
-# 5. Clear cache
+# 4. Clear the cache to ensure all entity plugins and routing are registered
 drush cr
 ```
 
