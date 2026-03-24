@@ -2,7 +2,6 @@
 
 > **Module:** `appointment`
 > **Drupal version:** 10 / 11
-> **Author:** Hamza Bahlaouane
 > **Date:** March 2026
 
 ---
