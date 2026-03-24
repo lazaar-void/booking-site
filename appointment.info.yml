@@ -4,9 +4,6 @@ description: 'an appointment booking module'
 package: Custom
 version: 1.0.0
 core_version_requirement: '^10 || ^11'
-project: appointment
-features:
-  - appointment
 dependencies:
   - 'csv_serialization:csv_serialization'
   - 'drupal:block'
