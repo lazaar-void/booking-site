@@ -25,6 +25,7 @@ A comprehensive **appointment booking system** for Drupal 10/11. Customers book 
 - **PHP** 8.1+
 - **Core modules:** `datetime`, `telephone`, `taxonomy`, `user`, `file`
 - **Composer:** `league/csv` (`composer require league/csv`)
+- **Migration (optional):** `migrate_plus`, `migrate_source_csv`, `migrate_tools`
 
 ## Installation
 
@@ -39,10 +40,11 @@ git clone https://github.com/lazaar-void/booking-site.git appointment
 cd /path/to/site/
 
 # Install the PHP library and Drupal dependencies
-composer require league/csv drupal/csv_serialization drupal/views_data_export
+composer require league/csv drupal/csv_serialization drupal/views_data_export \
+  drupal/migrate_plus drupal/migrate_source_csv drupal/migrate_tools
 
 # 3. Enable your custom module
-drush en appointment -y
+drush en appointment migrate migrate_plus migrate_source_csv migrate_tools -y
 
 # 4. Clear the cache to ensure all entity plugins and routing are registered
 drush cr
@@ -72,11 +74,19 @@ drush cr
 
 ```
 appointment/
+├── migrations/              # Migrate API YAML definitions
+│   ├── appointment_agencies.yml
+│   ├── appointment_advisers.yml
+│   └── appointment_appointments.yml
 ├── config/install/          # Bulk action configs (auto-imported on install)
 ├── css/appointment.css      # Wizard, dashboard, and hours widget styles
 ├── js/
 │   ├── appointment.js       # Legacy slot loader (fallback)
 │   └── appointment-calendar.js  # FullCalendar integration
+├── sample_data/             # Sample CSV files for migration/import
+│   ├── agencies.csv
+│   ├── advisers.csv
+│   └── appointments.csv
 ├── scripts/
 │   └── generate_appointments.php  # Performance test: generates 1000 appointments
 ├── src/
@@ -119,6 +129,29 @@ appointment/
 ```
 
 > **Import order:** Agencies first, then Advisers (advisers reference agencies by name).
+
+## Data Migration (Migrate API)
+
+The module includes 3 migration definitions in `migrations/` that can seed the site from CSV files in `sample_data/`:
+
+| Migration | Source CSV | Creates | Depends on |
+|-----------|-----------|---------|------------|
+| `appointment_agencies` | `agencies.csv` | Agency entities | — |
+| `appointment_advisers` | `advisers.csv` | User entities (adviser role) | agencies |
+| `appointment_appointments` | `appointments.csv` | Appointment entities | agencies + advisers |
+
+```bash
+# Import all migrations (respects dependency order)
+drush migrate:import --group=appointment
+
+# Check status
+drush migrate:status --group=appointment
+
+# Rollback all (reverse order)
+drush migrate:rollback --group=appointment
+```
+
+> **Advisers** are linked to agencies via `migration_lookup`. **Appointment types** (taxonomy terms) are created automatically if they don't exist via `entity_generate`.
 
 ## Documentation
 
