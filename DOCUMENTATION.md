@@ -725,15 +725,3 @@ Keys: `mon`, `tue`, `wed`, `thu`, `fri`, `sat`, `sun`. Value is `[startTime, end
 | Performance testing script (1000 appointments) | ✅ Done |
 | CSV sample data for testing | ✅ Done |
 
-### 🔲 Phase 4 — Polish & Delivery (Pending)
-
-| Task | Status |
-|------|--------|
-| CSV export with Drupal Batch API | ⬜ Pending |
-| French `.po` translation file | ⬜ Pending |
-| SMS notifications for reminders | ⬜ Pending |
-| Advanced role-based access for Branch Managers | ⬜ Pending |
-
----
-
-*Last updated: March 24, 2026*
