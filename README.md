@@ -34,7 +34,7 @@ cd /path/to/site/web/modules/custom/appointment/
 git clone https://github.com/lazaar-void/booking-site.git
 
 # 2. Install the dependency
-composer require league/csv
+composer require league/csv drupal/csv_serialization drupal/views_data_export
 
 # 3. Enable the module
 drush en appointment -y
