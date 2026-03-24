@@ -56,7 +56,7 @@ drush cr
 
 | Who | URL | What |
 |-----|-----|------|
-| Customer | `/book-an-appointment` | Start the booking wizard |
+| Anyone | `/book-an-appointment` | Start the booking wizard |
 | Logged-in user | `/my-appointments` | View/edit/cancel bookings |
 | Anyone | `/appointment/modify` | Modify a booking by reference + email |
 | Admin | `/admin/structure/appointment` | Manage all appointments |
