@@ -44,7 +44,7 @@ composer require league/csv drupal/csv_serialization drupal/views_data_export \
   drupal/migrate_plus drupal/migrate_source_csv drupal/migrate_tools
 
 # 3. Enable your custom module
-drush en appointment migrate migrate_plus migrate_source_csv migrate_tools -y
+drush en appointment -y
 
 # 4. Clear the cache to ensure all entity plugins and routing are registered
 drush cr
