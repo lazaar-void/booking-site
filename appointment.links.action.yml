@@ -9,3 +9,4 @@ appointment_agency.add_form:
   route_name: entity.appointment_agency.add_form
   appears_on:
     - entity.appointment_agency.collection
+    - entity.appointment_agency.settings

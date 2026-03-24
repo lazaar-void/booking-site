@@ -187,12 +187,7 @@ function appointment_entity_base_field_info(EntityTypeInterface $entity_type): a
   $fields['adviser_hours'] = BaseFieldDefinition::create('string_long')
     ->setLabel(t('Working hours'))
     ->setDescription(t('JSON schedule keyed by 3-letter day code. Example: {"mon":["09:00","17:00"]}.'))
-    ->setDisplayOptions('form', [
-      'type' => 'string_textarea',
-      'settings' => ['rows' => 4],
-      'weight' => 6,
-    ])
-    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayConfigurable('form', FALSE)
     ->setDisplayOptions('view', [
       'label' => 'above',
       'type' => 'basic_string',
@@ -307,30 +302,82 @@ function appointment_appointment_update(\Drupal\Core\Entity\EntityInterface $ent
 }
 
 /**
- * Implements hook_form_FORM_ID_alter() for user_form.
+ * Implements hook_form_alter().
  *
- * Replaces the raw JSON textarea for adviser_hours with a structured widget.
+ * Adds adviser-specific fields (agency, specializations, working hours) to the
+ * user form. These fields are built manually and only shown when the
+ * "adviser" role checkbox is ticked.
  */
-function appointment_form_user_form_alter(array &$form, FormStateInterface $form_state, string $form_id): void {
-  if (!isset($form['adviser_hours'])) {
+function appointment_form_alter(array &$form, FormStateInterface $form_state, string $form_id): void {
+  if (!in_array($form_id, ['user_form', 'user_register_form'], TRUE)) {
     return;
   }
 
-  // Hide the original raw field.
-  $form['adviser_hours']['#access'] = FALSE;
-
   /** @var \Drupal\user\UserInterface $user */
   $user = $form_state->getFormObject()->getEntity();
+
+  // ── Wrapper: visible only when adviser role is checked ──
+  $form['adviser_fields_wrapper'] = [
+    '#type'   => 'details',
+    '#title'  => t('Adviser settings'),
+    '#open'   => TRUE,
+    '#weight' => 50,
+    '#states' => [
+      'visible' => [
+        ':input[name="roles[adviser]"]' => ['checked' => TRUE],
+      ],
+    ],
+  ];
+
+  // ── 1. Agency dropdown ──
+  $agencies = \Drupal::entityTypeManager()
+    ->getStorage('appointment_agency')
+    ->loadMultiple();
+  $agencyOptions = ['' => t('- Select agency -')];
+  foreach ($agencies as $agency) {
+    $agencyOptions[$agency->id()] = $agency->label();
+  }
+  $currentAgency = $user->get('adviser_agency')->target_id ?? '';
+
+  $form['adviser_fields_wrapper']['adviser_agency_select'] = [
+    '#type'          => 'select',
+    '#title'         => t('Agency'),
+    '#description'   => t('The branch this adviser works at.'),
+    '#options'       => $agencyOptions,
+    '#default_value' => $currentAgency,
+  ];
+
+  // ── 2. Specializations checkboxes ──
+  $terms = \Drupal::entityTypeManager()
+    ->getStorage('taxonomy_term')
+    ->loadByProperties(['vid' => 'appointment_type']);
+  $specOptions = [];
+  foreach ($terms as $term) {
+    $specOptions[$term->id()] = $term->label();
+  }
+  $currentSpecs = [];
+  foreach ($user->get('adviser_specializations') as $item) {
+    $currentSpecs[] = $item->target_id;
+  }
+
+  $form['adviser_fields_wrapper']['adviser_specializations_select'] = [
+    '#type'          => 'checkboxes',
+    '#title'         => t('Specializations'),
+    '#description'   => t('Which appointment types this adviser can handle.'),
+    '#options'       => $specOptions,
+    '#default_value' => $currentSpecs,
+  ];
+
+  // ── 3. Working hours widget ──
   $stored = $user->get('adviser_hours')->value ?? '{}';
   $schedule = json_decode($stored, TRUE) ?? [];
 
-  $form['hours_widget'] = [
+  $form['adviser_fields_wrapper']['hours_widget'] = [
     '#type'        => 'details',
     '#title'       => t('Working hours'),
     '#open'        => TRUE,
-    '#description' => t('Select the opening and closing times for each working day. Leave a day unchecked if you are unavailable that day.'),
+    '#description' => t('Select the opening and closing times for each working day.'),
     '#tree'        => TRUE,
-    '#weight'      => $form['adviser_hours']['#weight'] ?? 5,
     '#attached'    => ['library' => ['appointment/booking-wizard']],
   ];
 
@@ -348,24 +395,24 @@ function appointment_form_user_form_alter(array &$form, FormStateInterface $form
   }
 
   foreach ($days as $key => $label) {
-    $dayData  = $schedule[$key] ?? NULL;
-    $isOpen   = !empty($dayData);
-    $openTime = $dayData[0] ?? '09:00';
+    $dayData   = $schedule[$key] ?? NULL;
+    $isOpen    = !empty($dayData);
+    $openTime  = $dayData[0] ?? '09:00';
     $closeTime = $dayData[1] ?? '17:00';
 
-    $form['hours_widget'][$key] = [
+    $form['adviser_fields_wrapper']['hours_widget'][$key] = [
       '#type'       => 'fieldset',
       '#title'      => t($label),
       '#attributes' => ['class' => ['hours-day-row']],
     ];
 
-    $form['hours_widget'][$key]['open'] = [
+    $form['adviser_fields_wrapper']['hours_widget'][$key]['open'] = [
       '#type'          => 'checkbox',
       '#title'         => t('Available'),
       '#default_value' => $isOpen ? 1 : 0,
     ];
 
-    $form['hours_widget'][$key]['start'] = [
+    $form['adviser_fields_wrapper']['hours_widget'][$key]['start'] = [
       '#type'          => 'select',
       '#title'         => t('From'),
       '#options'       => $timeOptions,
@@ -377,7 +424,7 @@ function appointment_form_user_form_alter(array &$form, FormStateInterface $form
       ],
     ];
 
-    $form['hours_widget'][$key]['end'] = [
+    $form['adviser_fields_wrapper']['hours_widget'][$key]['end'] = [
       '#type'          => 'select',
       '#title'         => t('To'),
       '#options'       => $timeOptions,
@@ -390,6 +437,7 @@ function appointment_form_user_form_alter(array &$form, FormStateInterface $form
     ];
   }
 
+  // Register our custom validation and entity builder callbacks.
   $form['#validate'][] = 'appointment_user_hours_validate';
   $form['#entity_builders'][] = 'appointment_user_hours_builder';
 }
@@ -418,6 +466,18 @@ function appointment_user_hours_validate(array &$form, FormStateInterface $form_
  * Entity builder callback to serialise the widget back to JSON before save.
  */
 function appointment_user_hours_builder(string $entity_type, \Drupal\Core\Entity\EntityInterface $entity, array &$form, FormStateInterface $form_state): void {
+  // Save agency.
+  $agencyId = $form_state->getValue('adviser_agency_select');
+  if ($agencyId !== NULL) {
+    $entity->set('adviser_agency', $agencyId ?: NULL);
+  }
+
+  // Save specializations.
+  $specs = $form_state->getValue('adviser_specializations_select') ?? [];
+  $specValues = array_filter($specs); // Remove unchecked (0) values.
+  $entity->set('adviser_specializations', array_values($specValues));
+
+  // Save working hours.
   $widget = $form_state->getValue('hours_widget') ?? [];
   $schedule = [];
   $days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
@@ -490,18 +550,51 @@ function appointment_form_views_exposed_form_alter(&$form, FormStateInterface $f
     }
 
     // 3. Convert any Date-related filter to a Date Picker.
-    // We use the 'Attribute-Only' approach here. By keeping the #type as textfield
-    // but adding the 'date' HTML attribute, we ensure the browser shows a calendar
-    // while keeping the data format compatible with the Views query engine.
+    // We change #type to 'date' so the browser renders a calendar picker.
+    // A companion hook_views_query_alter() converts the '=' condition to
+    // 'LIKE' so that '2026-03-25' matches '2026-03-25T09:00:00'.
     foreach ($form as $key => &$element) {
       if (str_contains($key, 'appointment_date')) {
-        // Check if it is a field and not a container.
-        if (isset($element['#type'])) {
-          $element['#attributes']['type'] = 'date';
+        // Case A: Simple filter (single textfield).
+        if (isset($element['#type']) && $element['#type'] === 'textfield') {
+          $element['#type'] = 'date';
           $element['#attributes']['class'][] = 'appointment-date-filter';
-          // Ensure we don't have a fixed size that might hide the calendar icon.
           unset($element['#size']);
         }
+        // Case B: 'Between' operator — nested 'min', 'max', or 'value'.
+        foreach (['min', 'max', 'value'] as $child) {
+          if (isset($element[$child]['#type']) && $element[$child]['#type'] === 'textfield') {
+            $element[$child]['#type'] = 'date';
+            $element[$child]['#attributes']['class'][] = 'appointment-date-filter';
+            unset($element[$child]['#size']);
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_views_query_alter().
+ *
+ * Converts '=' conditions on appointment_date to 'LIKE' so that a date-only
+ * value (e.g. '2026-03-25') matches stored datetime values ('2026-03-25T09:00:00').
+ */
+function appointment_views_query_alter($view, $query) {
+  if ($view->id() !== 'appointments_admin') {
+    return;
+  }
+
+  foreach ($query->where as &$group) {
+    foreach ($group['conditions'] as &$condition) {
+      if (
+        is_string($condition['field'] ?? NULL)
+        && str_contains($condition['field'], 'appointment_date')
+        && ($condition['operator'] ?? '') === '='
+        && !empty($condition['value'])
+      ) {
+        $condition['operator'] = 'LIKE';
+        $condition['value'] = $condition['value'] . '%';
       }
     }
   }

@@ -59,7 +59,11 @@ final class AppointmentForm extends ContentEntityForm {
     $date_value = $form_state->getValue(['appointment_date', 0, 'value']);
 
     if ($adviser_id && $date_value) {
-      $slot = new \DateTimeImmutable($date_value, new \DateTimeZone('UTC'));
+      // $date_value may be a DrupalDateTime object or a string.
+      $dateString = $date_value instanceof \Drupal\Core\Datetime\DrupalDateTime
+        ? $date_value->format('Y-m-d\TH:i:s')
+        : (string) $date_value;
+      $slot = new \DateTimeImmutable($dateString, new \DateTimeZone('UTC'));
       $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
 
       // 1. Future check.

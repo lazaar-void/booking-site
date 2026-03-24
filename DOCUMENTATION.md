@@ -8,32 +8,56 @@
 
 ## Table of Contents
 
-1. [Project Overview](#1-project-overview)
-2. [Architecture Overview](#2-architecture-overview)
-3. [Module Structure](#3-module-structure)
-4. [Entity Types](#4-entity-types)
-   - 4.1 [Agency (`appointment_agency`)](#41-agency-appointment_agency)
-   - 4.2 [Appointment (`appointment`)](#42-appointment-appointment)
-5. [User Entity Extensions (Adviser Fields)](#5-user-entity-extensions-adviser-fields)
-6. [Services](#6-services)
-   - 6.1 [AppointmentManagerService](#61-appointmentmanagerservice)
-   - 6.2 [EmailService](#62-emailservice)
-   - 6.3 [CsvImporter](#63-csvimporter)
-7. [Forms](#7-forms)
-   - 7.1 [AppointmentSubmitForm — 6-Step Wizard](#71-appointmentsubmitform--6-step-wizard)
-   - 7.2 [AgencyForm / AppointmentForm](#72-agencyform--appointmentform)
-   - 7.3 [Settings Forms](#73-settings-forms)
-   - 7.4 [ImportCsvForm](#74-importcsvform)
-8. [Controller](#8-controller)
-9. [Routing](#9-routing)
-10. [Permissions](#10-permissions)
-11. [Hooks](#11-hooks)
-12. [Email Notifications](#12-email-notifications)
-13. [Assets (CSS / JS)](#13-assets-css--js)
-14. [Templates](#14-templates)
-15. [Database Schema (Update Hooks)](#15-database-schema-update-hooks)
-16. [Installation Guide](#16-installation-guide)
-17. [Development Phases — Progress](#17-development-phases--progress)
+- [Appointment Booking Module — Technical Documentation](#appointment-booking-module--technical-documentation)
+  - [Table of Contents](#table-of-contents)
+  - [1. Project Overview](#1-project-overview)
+    - [Key Features](#key-features)
+  - [2. Architecture Overview](#2-architecture-overview)
+  - [3. Module Structure](#3-module-structure)
+  - [4. Entity Types](#4-entity-types)
+    - [4.1 Agency (`appointment_agency`)](#41-agency-appointment_agency)
+    - [4.2 Appointment (`appointment`)](#42-appointment-appointment)
+  - [5. User Entity Extensions (Adviser Fields)](#5-user-entity-extensions-adviser-fields)
+  - [6. Services](#6-services)
+    - [6.1 AppointmentManagerService](#61-appointmentmanagerservice)
+    - [6.2 EmailService](#62-emailservice)
+    - [6.3 CsvImporter](#63-csvimporter)
+  - [7. Forms](#7-forms)
+    - [7.1 AppointmentSubmitForm — 6-Step Wizard](#71-appointmentsubmitform--6-step-wizard)
+      - [Step flow](#step-flow)
+      - [Key implementation details](#key-implementation-details)
+    - [7.2 AgencyForm](#72-agencyform)
+    - [7.3 AppointmentForm](#73-appointmentform)
+    - [7.4 AppointmentCancelForm](#74-appointmentcancelform)
+    - [7.5 Appointment Modification Flow (3 Forms)](#75-appointment-modification-flow-3-forms)
+    - [7.6 Settings Forms](#76-settings-forms)
+    - [7.7 ImportCsvForm](#77-importcsvform)
+  - [8. Plugins](#8-plugins)
+    - [8.1 Appointment: Book Now CTA (`AppointmentBlock`)](#81-appointment-book-now-cta-appointmentblock)
+  - [9. Controller](#9-controller)
+  - [10. Routing](#10-routing)
+  - [10. Permissions](#10-permissions)
+  - [11. Hooks](#11-hooks)
+  - [12. Email Notifications](#12-email-notifications)
+    - [12.1 Hybrid Queue Processing](#121-hybrid-queue-processing)
+  - [13. Assets (CSS / JS)](#13-assets-css--js)
+    - [CSS (`css/appointment.css`)](#css-cssappointmentcss)
+    - [JS — `appointment.js` (legacy fallback)](#js--appointmentjs-legacy-fallback)
+    - [JS — `appointment-calendar.js` (FullCalendar)](#js--appointment-calendarjs-fullcalendar)
+  - [14. Templates](#14-templates)
+  - [15. Database Schema (Update Hooks)](#15-database-schema-update-hooks)
+  - [16. Installation Guide](#16-installation-guide)
+    - [Prerequisites](#prerequisites)
+    - [Steps](#steps)
+    - [Working hours JSON format](#working-hours-json-format)
+  - [17. Development Phases — Progress](#17-development-phases--progress)
+    - [✅ Phase 1 — Foundation](#-phase-1--foundation)
+    - [✅ Phase 2 — Core Functionality](#-phase-2--core-functionality)
+    - [✅ Phase 3 — Advanced Features](#-phase-3--advanced-features)
+    - [✅ Phase 4 — Polish \& Delivery](#-phase-4--polish--delivery)
+  - [19. Portability \& Features Export](#19-portability--features-export)
+    - [Syncing UI Changes to Code](#syncing-ui-changes-to-code)
+    - [Deployment via Drush](#deployment-via-drush)
 
 ---
 
@@ -377,10 +401,9 @@ Emails are dispatched to **both the customer and the adviser** for each event. M
 
 - **State persistence:** `PrivateTempStore` collection `appointment_wizard` — survives AJAX rebuilds, scoped per user session.
 - **AJAX navigation:** Back/Next buttons use `#ajax` callbacks with `fade` effect targeting `#appointment-wizard-wrapper`.
-- **Validation:**
-  - Step 5: Phone number validated against regex `^[+]?[0-9\s\-\(\)]{7,20}$`
-  - Step 6 (`validateForm`): `isSlotAvailable()` rechecked immediately before entity creation to prevent race conditions.
-- **On double-booking collision:** `RuntimeException` caught in `submitForm()` → error message shown → user redirected back to step 4.
+- **User-Friendly Validation:**
+  - **Phone Number:** Implements a "Clean-then-Validate" logic. The system automatically strips non-numeric characters (spaces, dashes, parentheses) before validating the core 7-15 digits. The cleaned version is saved to the database for consistency.
+  - **Double-booking collision:** `RuntimeException` caught in `submitForm()` → error message shown → user redirected back to step 4.
 - **On success:** TempStore keys cleared, success message with reference shown, redirect to `/my-appointments`.
 - **Progress bar:** Rendered as `<ol class="appointment-wizard-steps">` with CSS classes `step--done`, `step--active`, `step--pending`.
 
@@ -435,7 +458,20 @@ Uses the `FileExtension` constraint (Drupal 11 compatible) to ensure only `.csv`
 
 ---
 
-## 8. Controller
+## 8. Plugins
+
+### 8.1 Appointment: Book Now CTA (`AppointmentBlock`)
+
+**Class:** `Drupal\appointment\Plugin\Block\AppointmentBlock`
+**Machine Name:** `appointment_booking_cta`
+
+Provides a reusable Call to Action block that can be placed in any region (Sidebar, Footer, etc.). 
+- **Functionality:** Displays a "Ready to meet us?" heading and a styled button linking to the `/book-an-appointment` route.
+- **Assets:** Automatically attaches the `appointment/booking-wizard` library for styling.
+
+---
+
+## 9. Controller
 
 **Class:** `Drupal\appointment\Controller\AppointmentController`
 **Extends:** `ControllerBase`
@@ -450,7 +486,7 @@ Uses the `FileExtension` constraint (Drupal 11 compatible) to ensure only `.csv`
 
 ---
 
-## 9. Routing
+## 10. Routing
 
 **File:** `appointment.routing.yml`
 
@@ -724,3 +760,37 @@ Keys: `mon`, `tue`, `wed`, `thu`, `fri`, `sat`, `sun`. Value is `[startTime, end
 | Performance testing script (1000 appointments) | ✅ Done |
 | CSV sample data for testing | ✅ Done |
 
+### ✅ Phase 4 — Polish & Delivery
+
+| Task | Status |
+|------|--------|
+| Input sanitisation & Phone Validation cleanup | ✅ Done |
+| CSRF and access control audit | ✅ Done |
+| Anonymous user dashboard access with login prompt | ✅ Done |
+| PHPDoc / coding standards review | ✅ Done |
+| Final README and installation guide | ✅ Done |
+| **Portability & Features Export Guide** | ✅ Done |
+
+---
+
+## 19. Portability & Features Export
+
+The `appointment` module is designed to be portable across different Drupal instances. To capture UI-driven configuration (like new Views or Fields) into the module code, the **Features** module is recommended.
+
+### Syncing UI Changes to Code
+If you add a field to the User entity or modify a View in the Drupal UI, these changes live only in your database. To "sync" them to the module:
+
+1.  Navigate to `/admin/config/development/features`.
+2.  Edit the `appointment` feature.
+3.  Ensure the new components are selected (Fields, Field Storage, Views).
+4.  Click **"Write"** to update the `config/install` YAML files in your module folder.
+
+### Deployment via Drush
+To export all related configuration to the module via command line:
+```bash
+drush features:export appointment
+```
+
+---
+
+*Last updated: March 24, 2026*

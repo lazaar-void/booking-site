@@ -154,6 +154,7 @@ class AppointmentController extends ControllerBase {
     }
 
     $uid = $this->currentUser()->id();
+    $itemsPerPage = 10;
 
     $storage = $this->entityTypeManager()->getStorage('appointment');
     $ids = $storage->getQuery()
@@ -161,17 +162,24 @@ class AppointmentController extends ControllerBase {
       ->condition('status', 1)
       ->sort('appointment_date', 'DESC')
       ->accessCheck(TRUE)
+      ->pager($itemsPerPage)
       ->execute();
 
     $appointments = $storage->loadMultiple($ids);
 
     return [
-      '#theme'        => 'appointment_my_appointments',
-      '#appointments' => $appointments,
+      'content' => [
+        '#theme'        => 'appointment_my_appointments',
+        '#appointments' => $appointments,
+      ],
+      'pager' => [
+        '#type'   => 'pager',
+        '#weight' => 100,
+      ],
       '#attached'     => ['library' => ['appointment/booking-wizard']],
       '#cache'        => [
         'tags'     => ['appointment_list'],
-        'contexts' => ['user'],
+        'contexts' => ['user', 'url.query_args.pagers'],
       ],
     ];
   }
