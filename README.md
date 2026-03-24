@@ -29,8 +29,9 @@ A comprehensive **appointment booking system** for Drupal 10/11. Customers book 
 ## Installation
 
 ```bash
-# 1. Copy module to modules/custom/appointment/
-cp -r appointment/ /path/to/site/web/modules/custom/appointment/
+#clone inside modules/custom/appointment/
+cd /path/to/site/web/modules/custom/appointment/
+git clone https://github.com/lazaar-void/booking-site.git
 
 # 2. Install the dependency
 composer require league/csv
