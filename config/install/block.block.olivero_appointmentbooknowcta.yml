@@ -1,0 +1,19 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - appointment
+  theme:
+    - olivero
+id: olivero_appointmentbooknowcta
+theme: olivero
+region: footer_top
+weight: 0
+provider: null
+plugin: appointment_booking_cta
+settings:
+  id: appointment_booking_cta
+  label: 'Appointment: Book Now CTA'
+  label_display: '0'
+  provider: appointment
+visibility: {  }

@@ -1,0 +1,10 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - agency_entity
+id: agency_entity_save_action
+label: 'Save agency entities'
+type: agency_entity
+plugin: 'entity:save_action:agency_entity'
+configuration: {  }

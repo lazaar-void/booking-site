@@ -1,0 +1,10 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - agency_entity
+id: agency_entity_delete_action
+label: 'Delete agency entities'
+type: agency_entity
+plugin: 'entity:delete_action:agency_entity'
+configuration: {  }

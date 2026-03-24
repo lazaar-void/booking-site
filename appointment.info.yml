@@ -1,8 +1,24 @@
-name: 'Appointment'
+name: Appointment
 type: module
 description: 'an appointment booking module'
 package: Custom
-version: '1.0.0'
-core_version_requirement: ^10 || ^11
+version: 1.0.0
+core_version_requirement: '^10 || ^11'
+project: appointment
 features:
   - appointment
+dependencies:
+  - 'csv_serialization:csv_serialization'
+  - 'drupal:block'
+  - 'drupal:datetime'
+  - 'drupal:field'
+  - 'drupal:options'
+  - 'drupal:rest'
+  - 'drupal:serialization'
+  - 'drupal:system'
+  - 'drupal:taxonomy'
+  - 'drupal:telephone'
+  - 'drupal:text'
+  - 'drupal:user'
+  - 'drupal:views'
+  - 'views_data_export:views_data_export'
