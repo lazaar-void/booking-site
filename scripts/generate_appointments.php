@@ -4,10 +4,8 @@
  * @file
  * Generates 1000 test appointments for performance testing.
  *
- * Usage: vendor/bin/drush scr web/modules/custom/appointment/scripts/generate_appointments.php
+ * Usage: vendor/bin/drush scr web/modules/custom/appointment/scripts/generate_appointments.php.
  */
-
-use Drupal\appointment\Entity\Appointment;
 
 $count = 1000;
 $em = \Drupal::entityTypeManager();

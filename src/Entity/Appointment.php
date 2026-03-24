@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\appointment\Entity;
 
+use Drupal\datetime\Plugin\Field\FieldType\DateTimeItemInterface;
+use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Entity\Attribute\ContentEntityType;
 use Drupal\Core\Entity\ContentEntityDeleteForm;
 use Drupal\Core\Entity\EditorialContentEntityBase;
@@ -16,7 +18,6 @@ use Drupal\Core\Entity\Form\RevisionRevertForm;
 use Drupal\Core\Entity\Routing\AdminHtmlRouteProvider;
 use Drupal\Core\Entity\Routing\RevisionHtmlRouteProvider;
 use Drupal\Core\Field\BaseFieldDefinition;
-use Drupal\Core\Field\FieldStorageDefinitionInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\appointment\AppointmentAccessControlHandler;
 use Drupal\appointment\AppointmentInterface;
@@ -109,19 +110,19 @@ class Appointment extends EditorialContentEntityBase implements AppointmentInter
   /**
    * {@inheritdoc}
    */
-  public function getAppointmentDate(): ?\Drupal\Core\Datetime\DrupalDateTime {
+  public function getAppointmentDate(): ?DrupalDateTime {
     $value = $this->get('appointment_date')->value;
     if (empty($value)) {
       return NULL;
     }
-    return new \Drupal\Core\Datetime\DrupalDateTime($value, 'UTC');
+    return new DrupalDateTime($value, 'UTC');
   }
 
   /**
    * {@inheritdoc}
    */
-  public function setAppointmentDate(\Drupal\Core\Datetime\DrupalDateTime $date): static {
-    $this->set('appointment_date', $date->format(\Drupal\datetime\Plugin\Field\FieldType\DateTimeItemInterface::DATETIME_STORAGE_FORMAT));
+  public function setAppointmentDate(DrupalDateTime $date): static {
+    $this->set('appointment_date', $date->format(DateTimeItemInterface::DATETIME_STORAGE_FORMAT));
     return $this;
   }
 
@@ -309,7 +310,6 @@ class Appointment extends EditorialContentEntityBase implements AppointmentInter
       ->setDescription(t('The time that the appointment was last edited.'));
 
     // --- Phase 1 fields from the spec ---
-
     $fields['appointment_date'] = BaseFieldDefinition::create('datetime')
       ->setRevisionable(TRUE)
       ->setLabel(t('Appointment date'))

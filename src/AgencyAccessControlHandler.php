@@ -26,7 +26,7 @@ final class AgencyAccessControlHandler extends EntityAccessControlHandler {
       return AccessResult::allowed()->cachePerPermissions();
     }
 
-    return match($operation) {
+    return match ($operation) {
       'view' => AccessResult::allowedIfHasPermission($account, 'view appointment_agency'),
       'update' => AccessResult::allowedIfHasPermission($account, 'edit appointment_agency'),
       'delete' => AccessResult::allowedIfHasPermission($account, 'delete appointment_agency'),

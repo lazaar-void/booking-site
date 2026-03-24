@@ -77,9 +77,9 @@ class EmailService {
     $adviserId = $appointment->get('adviser')->target_id ?? 0;
     $typeId    = $appointment->get('appointment_type')->target_id ?? 0;
 
-    $agency  = $agencyId  ? $this->entityTypeManager->getStorage('appointment_agency')->load($agencyId)  : NULL;
-    $adviser = $adviserId ? $this->entityTypeManager->getStorage('user')->load($adviserId)                : NULL;
-    $type    = $typeId    ? $this->entityTypeManager->getStorage('taxonomy_term')->load($typeId)          : NULL;
+    $agency  = $agencyId ? $this->entityTypeManager->getStorage('appointment_agency')->load($agencyId) : NULL;
+    $adviser = $adviserId ? $this->entityTypeManager->getStorage('user')->load($adviserId) : NULL;
+    $type    = $typeId ? $this->entityTypeManager->getStorage('taxonomy_term')->load($typeId) : NULL;
 
     $rawDate = $appointment->get('appointment_date')->value ?? '';
     $dateFormatted = $rawDate

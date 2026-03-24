@@ -22,6 +22,9 @@ class AppointmentLookupForm extends FormBase {
     protected PrivateTempStoreFactory $tempStoreFactory,
   ) {}
 
+  /**
+   *
+   */
   public static function create(ContainerInterface $container): static {
     return new static(
       $container->get('appointment.manager'),
@@ -29,13 +32,19 @@ class AppointmentLookupForm extends FormBase {
     );
   }
 
+  /**
+   *
+   */
   public function getFormId(): string {
     return 'appointment_lookup_form';
   }
 
+  /**
+   *
+   */
   public function buildForm(array $form, FormStateInterface $form_state): array {
     $request = $this->getRequest();
-    
+
     $form['reference'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Booking Reference'),
@@ -61,6 +70,9 @@ class AppointmentLookupForm extends FormBase {
     return $form;
   }
 
+  /**
+   *
+   */
   public function submitForm(array &$form, FormStateInterface $form_state): void {
     $reference = trim($form_state->getValue('reference'));
     $email = trim($form_state->getValue('email'));

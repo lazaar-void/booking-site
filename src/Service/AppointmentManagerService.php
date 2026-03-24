@@ -102,8 +102,10 @@ class AppointmentManagerService {
   /**
    * Returns available H:i time slots for an adviser on a given date.
    *
-   * @param int    $adviserId  User ID of the adviser.
-   * @param string $date       ISO date string (Y-m-d).
+   * @param int $adviserId
+   *   User ID of the adviser.
+   * @param string $date
+   *   ISO date string (Y-m-d).
    *
    * @return string[]  List of available time strings, e.g. ['09:00','09:30'].
    */
@@ -143,10 +145,10 @@ class AppointmentManagerService {
     $allSlots = [];
     $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
     $cursor = $start;
-    
+
     while ($cursor < $end) {
       $slotDateTime = new \DateTimeImmutable($date . ' ' . $cursor->format('H:i'), new \DateTimeZone('UTC'));
-      
+
       // Only add slots that are in the future.
       if ($slotDateTime > $now) {
         $allSlots[] = $cursor->format('H:i');
@@ -243,8 +245,9 @@ class AppointmentManagerService {
   /**
    * Creates and saves a new appointment entity from wizard data.
    *
-   * @param array $data  Keys: agency_id, type_id, adviser_id, date (Y-m-d),
-   *                     time (H:i), customer_name, customer_email, customer_phone.
+   * @param array $data
+   *   Keys: agency_id, type_id, adviser_id, date (Y-m-d),
+   *   time (H:i), customer_name, customer_email, customer_phone.
    *
    * @return object  The saved appointment entity.
    *

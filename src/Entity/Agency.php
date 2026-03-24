@@ -259,7 +259,6 @@ class Agency extends EditorialContentEntityBase implements AgencyInterface {
       ->setDescription(t('The time that the agency was last edited.'));
 
     // --- Phase 1 fields from the spec ---
-
     $fields['address'] = BaseFieldDefinition::create('string_long')
       ->setRevisionable(TRUE)
       ->setTranslatable(TRUE)
@@ -335,4 +334,3 @@ class Agency extends EditorialContentEntityBase implements AgencyInterface {
   }
 
 }
-

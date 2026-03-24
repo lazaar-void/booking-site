@@ -1,0 +1,9 @@
+Reference,Date,Status,Agency Name,Adviser Username,Appointment Type,Customer Name,Customer Email,Customer Phone,Notes
+"APP-20260301-A1B2C3","2026-04-01T09:00:00","confirmed","Void Lab Agadir","youssef.el","Financial Advice","Ali Bennani","ali.bennani@email.com","0661234567","Premier rendez-vous conseil financier"
+"APP-20260301-D4E5F6","2026-04-01T10:30:00","confirmed","Void Lab Agadir","youssef.el","Tax Planning","Rachid Tazi","rachid.tazi@email.com","0672345678",""
+"APP-20260302-G7H8I9","2026-04-02T14:00:00","pending","Void Lab Agadir","fatima.b","Legal Consultation","Amina Idrissi","amina.idrissi@email.com","0683456789","Consultation droit du travail"
+"APP-20260303-J1K2L3","2026-04-03T09:30:00","confirmed","Void Lab Casablanca","ahmed.k","Financial Advice","Omar Fassi","omar.fassi@email.com","0694567890","Demande de credit immobilier"
+"APP-20260303-M4N5O6","2026-04-03T11:00:00","cancelled","Void Lab Casablanca","sara.m","Legal Consultation","Khadija Alaoui","khadija.alaoui@email.com","0605678901","Annule par le client"
+"APP-20260304-P7Q8R9","2026-04-04T10:00:00","pending","Void Lab Rabat","karim.r","Career Counseling","Yassine Berrada","yassine.berrada@email.com","0616789012","Orientation professionnelle"
+"APP-20260305-S1T2U3","2026-04-07T08:00:00","confirmed","Void Lab Marrakech","nadia.h","Legal Consultation","Salma Chraibi","salma.chraibi@email.com","0627890123",""
+"APP-20260305-V4W5X6","2026-04-07T09:00:00","pending","Void Lab Marrakech","nadia.h","Legal Consultation","Hassan El Ouafi","hassan.elouafi@email.com","0638901234","Litige commercial"

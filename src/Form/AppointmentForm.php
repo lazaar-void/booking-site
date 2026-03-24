@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\appointment\Form;
 
+use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\appointment\Service\AppointmentManagerService;
 use Drupal\Core\Entity\ContentEntityForm;
 use Drupal\Core\Entity\EntityRepositoryInterface;
@@ -31,7 +32,7 @@ final class AppointmentForm extends ContentEntityForm {
     EntityRepositoryInterface $entity_repository,
     EntityTypeBundleInfoInterface $entity_bundle_info,
     TimeInterface $time,
-    AppointmentManagerService $appointment_manager
+    AppointmentManagerService $appointment_manager,
   ) {
     parent::__construct($entity_repository, $entity_bundle_info, $time);
     $this->appointmentManager = $appointment_manager;
@@ -60,7 +61,7 @@ final class AppointmentForm extends ContentEntityForm {
 
     if ($adviser_id && $date_value) {
       // $date_value may be a DrupalDateTime object or a string.
-      $dateString = $date_value instanceof \Drupal\Core\Datetime\DrupalDateTime
+      $dateString = $date_value instanceof DrupalDateTime
         ? $date_value->format('Y-m-d\TH:i:s')
         : (string) $date_value;
       $slot = new \DateTimeImmutable($dateString, new \DateTimeZone('UTC'));

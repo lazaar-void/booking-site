@@ -1,0 +1,20 @@
+id: appointment_agencies
+label: 'Import agencies from CSV'
+migration_group: appointment
+source:
+  plugin: csv
+  path: modules/custom/appointment/sample_data/agencies.csv
+  ids:
+    - Name
+  header_offset: 0
+process:
+  label: Name
+  address: Address
+  phone: Phone
+  email: Email
+  operating_hours: 'Operating Hours'
+  status:
+    plugin: default_value
+    default_value: 1
+destination:
+  plugin: 'entity:appointment_agency'

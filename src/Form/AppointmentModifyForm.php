@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\appointment\Form;
 
+use Drupal\Core\Entity\RevisionableInterface;
+use Drupal\Core\Datetime\DrupalDateTime;
+use Drupal\Core\Url;
 use Drupal\appointment\Service\AppointmentManagerService;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormBase;
@@ -24,6 +27,9 @@ class AppointmentModifyForm extends FormBase {
     protected PrivateTempStoreFactory $tempStoreFactory,
   ) {}
 
+  /**
+   *
+   */
   public static function create(ContainerInterface $container): static {
     return new static(
       $container->get('entity_type.manager'),
@@ -32,10 +38,16 @@ class AppointmentModifyForm extends FormBase {
     );
   }
 
+  /**
+   *
+   */
   public function getFormId(): string {
     return 'appointment_modify_edit_form';
   }
 
+  /**
+   *
+   */
   public function buildForm(array $form, FormStateInterface $form_state): array {
     $store = $this->tempStoreFactory->get(self::STORE_KEY);
     $appointmentId = $store->get('appointment_id');
@@ -87,13 +99,13 @@ class AppointmentModifyForm extends FormBase {
     $adviserId = (int) $appointment->get('adviser')->target_id;
     $selectedDate = $form_state->getValue('date', $currentDate);
     $slots = $this->manager->getAvailableSlots($adviserId, $selectedDate);
-    
+
     // If the selected date is the original date, add the current time slot back to the options.
     if ($selectedDate === $currentDate && !in_array($currentTime, $slots)) {
       $slots[] = $currentTime;
       sort($slots);
     }
-    
+
     $slotOptions = array_combine($slots, $slots);
 
     $form['time'] = [
@@ -122,21 +134,27 @@ class AppointmentModifyForm extends FormBase {
     $form['actions']['cancel'] = [
       '#type' => 'link',
       '#title' => $this->t('Cancel'),
-      '#url' => \Drupal\Core\Url::fromRoute('appointment.my_appointments'),
+      '#url' => Url::fromRoute('appointment.my_appointments'),
       '#attributes' => ['class' => ['button']],
     ];
 
     return $form;
   }
 
+  /**
+   *
+   */
   public function ajaxUpdateSlots(array &$form, FormStateInterface $form_state): array {
     return $form['time'];
   }
 
+  /**
+   *
+   */
   public function validateForm(array &$form, FormStateInterface $form_state): void {
     $store = $this->tempStoreFactory->get(self::STORE_KEY);
     $appointmentId = (int) $store->get('appointment_id');
-    
+
     $appointment = $this->entityTypeManager->getStorage('appointment')->load($appointmentId);
     $adviserId = (int) $appointment->get('adviser')->target_id;
     $date = $form_state->getValue('date');
@@ -150,10 +168,13 @@ class AppointmentModifyForm extends FormBase {
     }
   }
 
+  /**
+   *
+   */
   public function submitForm(array &$form, FormStateInterface $form_state): void {
     $store = $this->tempStoreFactory->get(self::STORE_KEY);
     $appointmentId = $store->get('appointment_id');
-    
+
     $appointment = $this->entityTypeManager->getStorage('appointment')->load($appointmentId);
     if ($appointment) {
       $date = $form_state->getValue('date');
@@ -161,20 +182,20 @@ class AppointmentModifyForm extends FormBase {
       $slot = new \DateTimeImmutable("{$date}T{$time}:00", new \DateTimeZone('UTC'));
 
       // Update the appointment.
-      $appointment->setAppointmentDate(\Drupal\Core\Datetime\DrupalDateTime::createFromDateTime($slot));
+      $appointment->setAppointmentDate(DrupalDateTime::createFromDateTime($slot));
       $appointment->setNotes($form_state->getValue('notes'));
-      
+
       // Create a new revision.
-      if ($appointment instanceof \Drupal\Core\Entity\RevisionableInterface) {
+      if ($appointment instanceof RevisionableInterface) {
         $appointment->setNewRevision(TRUE);
         $appointment->setRevisionLogMessage($this->t('Updated via front-end modification form.'));
         $appointment->setRevisionUserId(\Drupal::currentUser()->id());
       }
-      
+
       $appointment->save();
 
       $this->messenger()->addStatus($this->t('Your appointment has been successfully updated.'));
-      
+
       // Clear TempStore.
       $store->delete('appointment_id');
       $store->delete('verified');

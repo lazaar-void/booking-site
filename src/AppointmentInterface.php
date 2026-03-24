@@ -75,4 +75,3 @@ interface AppointmentInterface extends ContentEntityInterface, EntityOwnerInterf
   public function setNotes(string $notes): static;
 
 }
-

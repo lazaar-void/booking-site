@@ -125,7 +125,7 @@ class ImportCsvForm extends FormBase {
       '@updated' => $results['updated'],
       '@errors' => $results['errors'],
     ]));
-    
+
     // Set file as temporary so it can be cleaned up later, or delete it now.
     $file->delete();
   }

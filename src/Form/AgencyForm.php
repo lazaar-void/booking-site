@@ -64,9 +64,9 @@ final class AgencyForm extends ContentEntityForm {
     $timeOptions = $this->buildTimeOptions();
 
     foreach (self::DAYS as $key => $label) {
-      $dayData  = $schedule[$key] ?? NULL;
-      $isOpen   = !empty($dayData);
-      $openTime = $dayData[0] ?? '09:00';
+      $dayData   = $schedule[$key] ?? NULL;
+      $isOpen    = !empty($dayData);
+      $openTime  = $dayData[0] ?? '09:00';
       $closeTime = $dayData[1] ?? '17:00';
 
       $form['hours_widget'][$key] = [

@@ -49,8 +49,10 @@ class AppointmentController extends ControllerBase {
    *
    * Route: /api/appointment/slots/{adviser_id}/{date}
    *
-   * @param int    $adviser_id  Adviser user ID (from route).
-   * @param string $date        ISO date Y-m-d (from route).
+   * @param int $adviser_id
+   *   Adviser user ID (from route).
+   * @param string $date
+   *   ISO date Y-m-d (from route).
    *
    * @return \Symfony\Component\HttpFoundation\JsonResponse
    */

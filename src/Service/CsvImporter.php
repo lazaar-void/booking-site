@@ -10,7 +10,6 @@ use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\taxonomy\Entity\Term;
 use Drupal\user\Entity\User;
-use Drupal\appointment\Entity\Agency;
 use League\Csv\Reader;
 
 /**
@@ -38,11 +37,11 @@ class CsvImporter {
   /**
    * Imports agencies from a CSV file.
    *
-   * Expected headers: Name, Address, Phone, Email, Operating Hours
+   * Expected headers: Name, Address, Phone, Email, Operating Hours.
    */
   public function importAgencies(string $filePath): array {
     $results = ['created' => 0, 'updated' => 0, 'errors' => 0];
-    
+
     try {
       $csv = Reader::createFromPath($filePath, 'r');
       $csv->setHeaderOffset(0);
@@ -90,7 +89,7 @@ class CsvImporter {
   /**
    * Imports advisers (users) from a CSV file.
    *
-   * Expected headers: Username, Email, Password, Agency Name, Working Hours, Specializations
+   * Expected headers: Username, Email, Password, Agency Name, Working Hours, Specializations.
    */
   public function importAdvisers(string $filePath): array {
     $results = ['created' => 0, 'updated' => 0, 'errors' => 0];

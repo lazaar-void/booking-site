@@ -19,7 +19,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Step 3 — Adviser selection (filtered by agency + type)
  * Step 4 — Date & time slot selection
  * Step 5 — Personal information (name, email, phone)
- * Step 6 — Summary & confirmation
+ * Step 6 — Summary & confirmation.
  */
 class AppointmentSubmitForm extends FormBase {
 
@@ -178,9 +178,9 @@ class AppointmentSubmitForm extends FormBase {
    */
   protected function buildStep3(array $form, $store): array {
     $form['step_title'] = $this->stepTitle($this->t('Step 3 of 6 — Choose an adviser'));
-    $agencyId  = (int) $store->get('agency_id');
-    $typeId    = (int) $store->get('type_id');
-    $options   = ($agencyId && $typeId)
+    $agencyId           = (int) $store->get('agency_id');
+    $typeId             = (int) $store->get('type_id');
+    $options            = ($agencyId && $typeId)
       ? $this->manager->getAdviserOptions($agencyId, $typeId)
       : [];
 
@@ -289,24 +289,24 @@ class AppointmentSubmitForm extends FormBase {
   protected function buildStep6(array $form, $store): array {
     $form['step_title'] = $this->stepTitle($this->t('Step 6 of 6 — Confirm your appointment'));
 
-    $em       = \Drupal::entityTypeManager();
+    $em        = \Drupal::entityTypeManager();
     $agencyId  = (int) $store->get('agency_id');
     $adviserId = (int) $store->get('adviser_id');
     $typeId    = (int) $store->get('type_id');
 
-    $agency  = $agencyId  ? $em->getStorage('appointment_agency')->load($agencyId)  : NULL;
-    $adviser = $adviserId ? $em->getStorage('user')->load($adviserId)                : NULL;
-    $type    = $typeId    ? $em->getStorage('taxonomy_term')->load($typeId)          : NULL;
+    $agency  = $agencyId ? $em->getStorage('appointment_agency')->load($agencyId) : NULL;
+    $adviser = $adviserId ? $em->getStorage('user')->load($adviserId) : NULL;
+    $type    = $typeId ? $em->getStorage('taxonomy_term')->load($typeId) : NULL;
 
     $rows = [
-      [$this->t('Agency'),       $agency?->label()           ?? '—'],
-      [$this->t('Type'),         $type?->label()             ?? '—'],
-      [$this->t('Adviser'),      $adviser?->getDisplayName() ?? '—'],
-      [$this->t('Date'),         $store->get('date')         ?? '—'],
-      [$this->t('Time'),         $store->get('time')         ?? '—'],
-      [$this->t('Name'),         $store->get('customer_name')  ?? '—'],
-      [$this->t('Email'),        $store->get('customer_email') ?? '—'],
-      [$this->t('Phone'),        $store->get('customer_phone') ?? '—'],
+      [$this->t('Agency'), $agency?->label() ?? '—'],
+      [$this->t('Type'), $type?->label() ?? '—'],
+      [$this->t('Adviser'), $adviser?->getDisplayName() ?? '—'],
+      [$this->t('Date'), $store->get('date') ?? '—'],
+      [$this->t('Time'), $store->get('time') ?? '—'],
+      [$this->t('Name'), $store->get('customer_name') ?? '—'],
+      [$this->t('Email'), $store->get('customer_email') ?? '—'],
+      [$this->t('Phone'), $store->get('customer_phone') ?? '—'],
     ];
 
     $form['summary'] = [
@@ -458,7 +458,7 @@ class AppointmentSubmitForm extends FormBase {
       $appointment = $this->manager->createAppointment($data);
 
       // Clear TempStore.
-      foreach (['agency_id','type_id','adviser_id','date','time','customer_name','customer_email','customer_phone'] as $key) {
+      foreach (['agency_id', 'type_id', 'adviser_id', 'date', 'time', 'customer_name', 'customer_email', 'customer_phone'] as $key) {
         $store->delete($key);
       }
 

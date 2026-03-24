@@ -52,7 +52,7 @@ final class AppointmentEmailWorker extends QueueWorkerBase implements ContainerF
    */
   public function processItem($data): void {
     $entity_id = $data['entity_id'] ?? NULL;
-    $type      = $data['type']      ?? NULL;
+    $type      = $data['type'] ?? NULL;
 
     if (!$entity_id || !$type) {
       return;
@@ -68,9 +68,11 @@ final class AppointmentEmailWorker extends QueueWorkerBase implements ContainerF
       case 'confirmation':
         $this->emailService->sendConfirmation($appointment);
         break;
+
       case 'modification':
         $this->emailService->sendModification($appointment);
         break;
+
       case 'cancellation':
         $this->emailService->sendCancellation($appointment);
         break;

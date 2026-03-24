@@ -22,6 +22,9 @@ class AppointmentVerifyForm extends FormBase {
     protected PrivateTempStoreFactory $tempStoreFactory,
   ) {}
 
+  /**
+   *
+   */
   public static function create(ContainerInterface $container): static {
     return new static(
       $container->get('entity_type.manager'),
@@ -29,10 +32,16 @@ class AppointmentVerifyForm extends FormBase {
     );
   }
 
+  /**
+   *
+   */
   public function getFormId(): string {
     return 'appointment_verify_form';
   }
 
+  /**
+   *
+   */
   public function buildForm(array $form, FormStateInterface $form_state): array {
     $store = $this->tempStoreFactory->get(self::STORE_KEY);
     $appointmentId = $store->get('appointment_id');
@@ -59,6 +68,9 @@ class AppointmentVerifyForm extends FormBase {
     return $form;
   }
 
+  /**
+   *
+   */
   public function validateForm(array &$form, FormStateInterface $form_state): void {
     $store = $this->tempStoreFactory->get(self::STORE_KEY);
     $appointmentId = $store->get('appointment_id');
@@ -72,6 +84,9 @@ class AppointmentVerifyForm extends FormBase {
     }
   }
 
+  /**
+   *
+   */
   public function submitForm(array &$form, FormStateInterface $form_state): void {
     $store = $this->tempStoreFactory->get(self::STORE_KEY);
     $store->set('verified', TRUE);

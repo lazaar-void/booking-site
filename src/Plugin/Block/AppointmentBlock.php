@@ -17,14 +17,12 @@ use Drupal\Core\Url;
  *   category = @Translation("Appointment")
  * )
  */
-final class AppointmentBlock extends BlockBase
-{
+final class AppointmentBlock extends BlockBase {
 
   /**
    * {@inheritdoc}
    */
-  public function build(): array
-  {
+  public function build(): array {
     $url = Url::fromRoute('appointment.booking_wizard');
     $link = Link::fromTextAndUrl($this->t('Book an Appointment'), $url)->toRenderable();
 

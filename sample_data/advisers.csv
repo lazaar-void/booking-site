@@ -1,0 +1,7 @@
+Username,Email,Password,Agency Name,Working Hours,Specializations
+"youssef.el","youssef.el@voidlab.ma","Adviser2026!","Void Lab Agadir","{""mon"":[""09:00"",""12:30""],""tue"":[""09:00"",""17:00""],""wed"":[""09:00"",""17:00""],""thu"":[""14:00"",""17:00""],""fri"":[""09:00"",""16:00""]}","Financial Advice, Tax Planning"
+"fatima.b","fatima.b@voidlab.ma","Adviser2026!","Void Lab Agadir","{""mon"":[""09:00"",""17:00""],""tue"":[""09:00"",""17:00""],""wed"":[""09:00"",""12:00""],""thu"":[""09:00"",""17:00""],""fri"":[""09:00"",""16:00""]}","Legal Consultation, Career Counseling"
+"ahmed.k","ahmed.k@voidlab.ma","Adviser2026!","Void Lab Casablanca","{""mon"":[""08:30"",""18:00""],""tue"":[""08:30"",""18:00""],""wed"":[""08:30"",""18:00""],""thu"":[""08:30"",""18:00""],""fri"":[""08:30"",""17:00""]}","Financial Advice"
+"sara.m","sara.m@voidlab.ma","Adviser2026!","Void Lab Casablanca","{""mon"":[""08:30"",""13:00""],""tue"":[""08:30"",""18:00""],""wed"":[""08:30"",""18:00""],""thu"":[""08:30"",""18:00""],""fri"":[""08:30"",""17:00""]}","Legal Consultation, Tax Planning"
+"karim.r","karim.r@voidlab.ma","Adviser2026!","Void Lab Rabat","{""mon"":[""09:00"",""17:30""],""tue"":[""09:00"",""17:30""],""wed"":[""09:00"",""17:30""],""thu"":[""09:00"",""17:30""],""fri"":[""09:00"",""16:30""]}","Career Counseling, Financial Advice"
+"nadia.h","nadia.h@voidlab.ma","Adviser2026!","Void Lab Marrakech","{""mon"":[""08:00"",""16:00""],""tue"":[""08:00"",""16:00""],""wed"":[""08:00"",""16:00""],""thu"":[""08:00"",""16:00""],""fri"":[""08:00"",""14:00""]}","Legal Consultation"

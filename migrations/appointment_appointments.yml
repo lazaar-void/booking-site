@@ -1,0 +1,52 @@
+id: appointment_appointments
+label: 'Import appointments from CSV'
+migration_group: appointment
+migration_dependencies:
+  required:
+    - appointment_agencies
+    - appointment_advisers
+source:
+  plugin: csv
+  path: modules/custom/appointment/sample_data/appointments.csv
+  ids:
+    - Reference
+  header_offset: 0
+process:
+  label: Reference
+  appointment_date: Date
+  appointment_status: Status
+  agency:
+    -
+      plugin: migration_lookup
+      migration: appointment_agencies
+      source: 'Agency Name'
+      no_stub: true
+    -
+      plugin: skip_on_empty
+      method: process
+  adviser:
+    -
+      plugin: migration_lookup
+      migration: appointment_advisers
+      source: 'Adviser Username'
+      no_stub: true
+    -
+      plugin: skip_on_empty
+      method: process
+  appointment_type:
+    -
+      plugin: entity_generate
+      source: 'Appointment Type'
+      entity_type: taxonomy_term
+      bundle: appointment_type
+      value_key: name
+      bundle_key: vid
+  customer_name: 'Customer Name'
+  customer_email: 'Customer Email'
+  customer_phone: 'Customer Phone'
+  notes: Notes
+  status:
+    plugin: default_value
+    default_value: 1
+destination:
+  plugin: 'entity:appointment'

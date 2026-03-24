@@ -54,4 +54,3 @@ interface AgencyInterface extends ContentEntityInterface, EntityOwnerInterface, 
   public function setOperatingHours(string $hours): static;
 
 }
-

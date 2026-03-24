@@ -1,0 +1,46 @@
+id: appointment_advisers
+label: 'Import advisers from CSV'
+migration_group: appointment
+migration_dependencies:
+  required:
+    - appointment_agencies
+source:
+  plugin: csv
+  path: modules/custom/appointment/sample_data/advisers.csv
+  ids:
+    - Username
+  header_offset: 0
+process:
+  name: Username
+  mail: Email
+  pass: Password
+  status:
+    plugin: default_value
+    default_value: 1
+  roles:
+    plugin: default_value
+    default_value:
+      - adviser
+  adviser_hours: 'Working Hours'
+  adviser_agency:
+    -
+      plugin: migration_lookup
+      migration: appointment_agencies
+      source: 'Agency Name'
+      no_stub: true
+    -
+      plugin: skip_on_empty
+      method: process
+  adviser_specializations:
+    -
+      plugin: explode
+      delimiter: ', '
+      source: Specializations
+    -
+      plugin: entity_generate
+      entity_type: taxonomy_term
+      bundle: appointment_type
+      value_key: name
+      bundle_key: vid
+destination:
+  plugin: 'entity:user'
