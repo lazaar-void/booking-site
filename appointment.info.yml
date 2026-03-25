@@ -5,6 +5,7 @@ package: Custom
 version: 1.0.0
 core_version_requirement: '^10 || ^11'
 dependencies:
+  - 'appointment:appointment'
   - 'csv_serialization:csv_serialization'
   - 'drupal:block'
   - 'drupal:datetime'
