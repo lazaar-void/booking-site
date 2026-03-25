@@ -39,12 +39,12 @@ final class AppointmentEmailWorker extends QueueWorkerBase implements ContainerF
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition): self {
     return new self(
-      $configuration,
-      $plugin_id,
-      $plugin_definition,
-      $container->get('entity_type.manager'),
-      $container->get('appointment.email'),
-    );
+          $configuration,
+          $plugin_id,
+          $plugin_definition,
+          $container->get('entity_type.manager'),
+          $container->get('appointment.email'),
+      );
   }
 
   /**

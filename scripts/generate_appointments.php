@@ -52,8 +52,16 @@ $typeIds = array_values($typeIds);
 $statuses = ['pending', 'confirmed', 'cancelled'];
 
 // --- Customer name pools ---
-$firstNames = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Hector', 'Iris', 'Julien', 'Karim', 'Layla', 'Mohamed', 'Nadia', 'Omar', 'Pauline', 'Quentin', 'Rachida', 'Sophie', 'Thomas'];
-$lastNames  = ['Martin', 'Bernard', 'Dubois', 'Laurent', 'Simon', 'Michel', 'Garcia', 'David', 'Bertrand', 'Moreau', 'Leroy', 'Roux', 'Fournier', 'Girard', 'Bonnet', 'Dupont', 'Lambert', 'Fontaine', 'Rousseau', 'Vincent'];
+$firstNames = ['Alice', 'Bob', 'Charlie', 'Diana',
+  'Eve', 'Frank', 'Grace',
+  'Hector', 'Iris', 'Julien', 'Karim',
+  'Layla', 'Mohamed', 'Nadia', 'Omar',
+  'Pauline', 'Quentin', 'Rachida', 'Sophie', 'Thomas'];
+$lastNames  = ['Martin', 'Bernard', 'Dubois', 'Laurent',
+  'Simon', 'Michel', 'Garcia', 'David', 'Bertrand',
+  'Moreau', 'Leroy', 'Roux', 'Fournier',
+  'Girard', 'Bonnet', 'Dupont', 'Lambert',
+  'Fontaine', 'Rousseau', 'Vincent'];
 
 // --- Disable email sending during bulk insert ---
 // We temporarily swap the mail system to NULL to avoid sending 1000 emails.

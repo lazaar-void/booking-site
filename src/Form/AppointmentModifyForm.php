@@ -18,35 +18,35 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Final step of modification: The actual edit form.
  */
 class AppointmentModifyForm extends FormBase {
-
   const STORE_KEY = 'appointment_modify';
 
   public function __construct(
     protected EntityTypeManagerInterface $entityTypeManager,
     protected AppointmentManagerService $manager,
     protected PrivateTempStoreFactory $tempStoreFactory,
-  ) {}
-
-  /**
-   *
-   */
-  public static function create(ContainerInterface $container): static {
-    return new static(
-      $container->get('entity_type.manager'),
-      $container->get('appointment.manager'),
-      $container->get('tempstore.private')
-    );
+  ) {
   }
 
   /**
-   *
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container): static {
+    return new static(
+          $container->get('entity_type.manager'),
+          $container->get('appointment.manager'),
+          $container->get('tempstore.private')
+      );
+  }
+
+  /**
+   * {@inheritdoc}
    */
   public function getFormId(): string {
     return 'appointment_modify_edit_form';
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state): array {
     $store = $this->tempStoreFactory->get(self::STORE_KEY);
@@ -100,7 +100,8 @@ class AppointmentModifyForm extends FormBase {
     $selectedDate = $form_state->getValue('date', $currentDate);
     $slots = $this->manager->getAvailableSlots($adviserId, $selectedDate);
 
-    // If the selected date is the original date, add the current time slot back to the options.
+    // If the selected date is the original date,
+    // add the current time slot back to the options.
     if ($selectedDate === $currentDate && !in_array($currentTime, $slots)) {
       $slots[] = $currentTime;
       sort($slots);
@@ -142,14 +143,14 @@ class AppointmentModifyForm extends FormBase {
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public function ajaxUpdateSlots(array &$form, FormStateInterface $form_state): array {
     return $form['time'];
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state): void {
     $store = $this->tempStoreFactory->get(self::STORE_KEY);
@@ -169,7 +170,7 @@ class AppointmentModifyForm extends FormBase {
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state): void {
     $store = $this->tempStoreFactory->get(self::STORE_KEY);

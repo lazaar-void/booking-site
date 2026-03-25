@@ -31,7 +31,8 @@ class AppointmentManagerService {
     protected AccountProxyInterface $currentUser,
     protected ConfigFactoryInterface $configFactory,
     protected LoggerInterface $logger,
-  ) {}
+  ) {
+  }
 
   // ---------------------------------------------------------------------------
   // Data retrieval helpers used by the wizard steps.
@@ -255,20 +256,20 @@ class AppointmentManagerService {
    */
   public function createAppointment(array $data): object {
     $slot = new \DateTimeImmutable(
-      "{$data['date']}T{$data['time']}:00",
-      new \DateTimeZone('UTC')
-    );
+          "{$data['date']}T{$data['time']}:00",
+          new \DateTimeZone('UTC')
+      );
 
     if ($slot <= new \DateTimeImmutable('now', new \DateTimeZone('UTC'))) {
       throw new \RuntimeException(
-        'The requested time slot must be in the future.'
-      );
+            'The requested time slot must be in the future.'
+        );
     }
 
     if (!$this->isSlotAvailable((int) $data['adviser_id'], $slot)) {
       throw new \RuntimeException(
-        'The requested time slot is no longer available. Please choose another.'
-      );
+            'The requested time slot is no longer available. Please choose another.'
+        );
     }
 
     $reference = $this->generateReference();

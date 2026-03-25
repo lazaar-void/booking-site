@@ -14,33 +14,33 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * First step of modification: Lookup by reference and email.
  */
 class AppointmentLookupForm extends FormBase {
-
   const STORE_KEY = 'appointment_modify';
 
   public function __construct(
     protected AppointmentManagerService $manager,
     protected PrivateTempStoreFactory $tempStoreFactory,
-  ) {}
-
-  /**
-   *
-   */
-  public static function create(ContainerInterface $container): static {
-    return new static(
-      $container->get('appointment.manager'),
-      $container->get('tempstore.private')
-    );
+  ) {
   }
 
   /**
-   *
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container): static {
+    return new static(
+          $container->get('appointment.manager'),
+          $container->get('tempstore.private')
+      );
+  }
+
+  /**
+   * {@inheritdoc}
    */
   public function getFormId(): string {
     return 'appointment_lookup_form';
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state): array {
     $request = $this->getRequest();
@@ -71,7 +71,7 @@ class AppointmentLookupForm extends FormBase {
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state): void {
     $reference = trim($form_state->getValue('reference'));

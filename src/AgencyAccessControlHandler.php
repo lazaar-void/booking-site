@@ -28,12 +28,12 @@ final class AgencyAccessControlHandler extends EntityAccessControlHandler {
 
     return match ($operation) {
       'view' => AccessResult::allowedIfHasPermission($account, 'view appointment_agency'),
-      'update' => AccessResult::allowedIfHasPermission($account, 'edit appointment_agency'),
-      'delete' => AccessResult::allowedIfHasPermission($account, 'delete appointment_agency'),
-      'delete revision' => AccessResult::allowedIfHasPermission($account, 'delete appointment_agency revision'),
-      'view all revisions', 'view revision' => AccessResult::allowedIfHasPermissions($account, ['view appointment_agency revision', 'view appointment_agency']),
-      'revert' => AccessResult::allowedIfHasPermissions($account, ['revert appointment_agency revision', 'edit appointment_agency']),
-      default => AccessResult::neutral(),
+            'update' => AccessResult::allowedIfHasPermission($account, 'edit appointment_agency'),
+            'delete' => AccessResult::allowedIfHasPermission($account, 'delete appointment_agency'),
+            'delete revision' => AccessResult::allowedIfHasPermission($account, 'delete appointment_agency revision'),
+            'view all revisions', 'view revision' => AccessResult::allowedIfHasPermissions($account, ['view appointment_agency revision', 'view appointment_agency']),
+            'revert' => AccessResult::allowedIfHasPermissions($account, ['revert appointment_agency revision', 'edit appointment_agency']),
+            default => AccessResult::neutral(),
     };
   }
 

@@ -22,7 +22,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Step 6 — Summary & confirmation.
  */
 class AppointmentSubmitForm extends FormBase {
-
   /**
    * TempStore collection name.
    */
@@ -47,16 +46,17 @@ class AppointmentSubmitForm extends FormBase {
   public function __construct(
     protected AppointmentManagerService $manager,
     protected PrivateTempStoreFactory $tempStoreFactory,
-  ) {}
+  ) {
+  }
 
   /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
     return new static(
-      $container->get('appointment.manager'),
-      $container->get('tempstore.private'),
-    );
+          $container->get('appointment.manager'),
+          $container->get('tempstore.private'),
+      );
   }
 
   /**
@@ -136,10 +136,6 @@ class AppointmentSubmitForm extends FormBase {
     return $form;
   }
 
-  // ---------------------------------------------------------------------------
-  // Step builders
-  // ---------------------------------------------------------------------------
-
   /**
    * Step 1: choose an agency.
    */
@@ -181,8 +177,8 @@ class AppointmentSubmitForm extends FormBase {
     $agencyId           = (int) $store->get('agency_id');
     $typeId             = (int) $store->get('type_id');
     $options            = ($agencyId && $typeId)
-      ? $this->manager->getAdviserOptions($agencyId, $typeId)
-      : [];
+        ? $this->manager->getAdviserOptions($agencyId, $typeId)
+        : [];
 
     if (empty($options)) {
       $form['no_advisers'] = [
@@ -380,9 +376,9 @@ class AppointmentSubmitForm extends FormBase {
       $time = $form_state->getValue('time');
       if (!$date || !$time) {
         $form_state->setErrorByName(
-          '',
-          $this->t('Please select a time slot on the calendar.')
-        );
+              '',
+              $this->t('Please select a time slot on the calendar.')
+          );
       }
       else {
         // Double check it is in the future.
@@ -406,9 +402,9 @@ class AppointmentSubmitForm extends FormBase {
 
       if ($phone && !preg_match('/^\+?\d{7,15}$/', $cleanPhone)) {
         $form_state->setErrorByName(
-          'customer_phone',
-          $this->t('Please enter a valid phone number (e.g. +33 6 12 34 56 78).')
-        );
+              'customer_phone',
+              $this->t('Please enter a valid phone number (e.g. +33 6 12 34 56 78).')
+          );
       }
       else {
         // Save the cleaned version back to the form state.
@@ -427,9 +423,9 @@ class AppointmentSubmitForm extends FormBase {
         $slot = new \DateTimeImmutable("{$date}T{$time}:00", new \DateTimeZone('UTC'));
         if (!$this->manager->isSlotAvailable($adviserId, $slot)) {
           $form_state->setErrorByName(
-            '',
-            $this->t('The selected time slot is no longer available. Please go back and choose another.')
-          );
+                '',
+                $this->t('The selected time slot is no longer available. Please go back and choose another.')
+            );
         }
       }
     }
@@ -458,14 +454,23 @@ class AppointmentSubmitForm extends FormBase {
       $appointment = $this->manager->createAppointment($data);
 
       // Clear TempStore.
-      foreach (['agency_id', 'type_id', 'adviser_id', 'date', 'time', 'customer_name', 'customer_email', 'customer_phone'] as $key) {
+      foreach (
+            ['agency_id',
+              'type_id',
+              'adviser_id',
+              'date',
+              'time',
+              'customer_name',
+              'customer_email',
+              'customer_phone'] as $key
+        ) {
         $store->delete($key);
       }
 
       $this->messenger()->addStatus($this->t(
-        'Your appointment has been booked. Reference: <strong>@ref</strong>. A confirmation email has been sent.',
-        ['@ref' => $appointment->label()]
-      ));
+            'Your appointment has been booked. Reference: <strong>@ref</strong>. A confirmation email has been sent.',
+            ['@ref' => $appointment->label()]
+        ));
 
       if (\Drupal::currentUser()->isAnonymous()) {
         $this->messenger()->addWarning($this->t('Log in to track your appointments and manage your bookings.'));

@@ -23,7 +23,8 @@ class EmailService {
     protected LoggerInterface $logger,
     protected LanguageManagerInterface $languageManager,
     protected QueueFactory $queueFactory,
-  ) {}
+  ) {
+  }
 
   /**
    * Enqueues an email for background processing.
@@ -83,8 +84,8 @@ class EmailService {
 
     $rawDate = $appointment->get('appointment_date')->value ?? '';
     $dateFormatted = $rawDate
-      ? (new \DateTimeImmutable($rawDate))->format('d/m/Y H:i')
-      : 'TBD';
+        ? (new \DateTimeImmutable($rawDate))->format('d/m/Y H:i')
+        : 'TBD';
 
     return [
       'appointment'    => $appointment,
@@ -125,14 +126,14 @@ class EmailService {
     $params   = $this->buildParams($appointment, $recipientType);
 
     $this->mailManager->mail(
-      module:   'appointment',
-      key:      $key . '_' . $recipientType,
-      to:       $to,
-      langcode: $langcode,
-      params:   $params,
-      reply:    NULL,
-      send:     TRUE,
-    );
+          module:   'appointment',
+          key:      $key . '_' . $recipientType,
+          to:       $to,
+          langcode: $langcode,
+          params:   $params,
+          reply:    NULL,
+          send:     TRUE,
+      );
   }
 
 }

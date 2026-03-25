@@ -43,11 +43,11 @@ final class AppointmentAccessControlHandler extends EntityAccessControlHandler {
 
     return match ($operation) {
       'update' => AccessResult::allowedIfHasPermission($account, 'edit appointment'),
-      'delete' => AccessResult::allowedIfHasPermission($account, 'delete appointment'),
-      'delete revision' => AccessResult::allowedIfHasPermission($account, 'delete appointment revision'),
-      'view all revisions', 'view revision' => AccessResult::allowedIfHasPermissions($account, ['view appointment revision', 'view appointment']),
-      'revert' => AccessResult::allowedIfHasPermissions($account, ['revert appointment revision', 'edit appointment']),
-      default => AccessResult::neutral(),
+            'delete' => AccessResult::allowedIfHasPermission($account, 'delete appointment'),
+            'delete revision' => AccessResult::allowedIfHasPermission($account, 'delete appointment revision'),
+            'view all revisions', 'view revision' => AccessResult::allowedIfHasPermissions($account, ['view appointment revision', 'view appointment']),
+            'revert' => AccessResult::allowedIfHasPermissions($account, ['revert appointment revision', 'edit appointment']),
+            default => AccessResult::neutral(),
     };
   }
 

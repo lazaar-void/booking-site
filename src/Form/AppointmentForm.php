@@ -17,7 +17,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Form controller for the appointment entity edit forms.
  */
 final class AppointmentForm extends ContentEntityForm {
-
   /**
    * The appointment manager service.
    *
@@ -43,11 +42,11 @@ final class AppointmentForm extends ContentEntityForm {
    */
   public static function create(ContainerInterface $container): static {
     return new static(
-      $container->get('entity.repository'),
-      $container->get('entity_type.bundle.info'),
-      $container->get('datetime.time'),
-      $container->get('appointment.manager')
-    );
+          $container->get('entity.repository'),
+          $container->get('entity_type.bundle.info'),
+          $container->get('datetime.time'),
+          $container->get('appointment.manager')
+      );
   }
 
   /**
@@ -62,8 +61,8 @@ final class AppointmentForm extends ContentEntityForm {
     if ($adviser_id && $date_value) {
       // $date_value may be a DrupalDateTime object or a string.
       $dateString = $date_value instanceof DrupalDateTime
-        ? $date_value->format('Y-m-d\TH:i:s')
-        : (string) $date_value;
+            ? $date_value->format('Y-m-d\TH:i:s')
+            : (string) $date_value;
       $slot = new \DateTimeImmutable($dateString, new \DateTimeZone('UTC'));
       $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
 

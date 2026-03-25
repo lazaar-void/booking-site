@@ -15,7 +15,6 @@ use Drupal\Core\Form\FormStateInterface;
  * are serialised back to the JSON format consumed by AppointmentManagerService.
  */
 final class AgencyForm extends ContentEntityForm {
-
   /**
    * Ordered list of days with their JSON key and human label.
    */
@@ -129,9 +128,9 @@ final class AgencyForm extends ContentEntityForm {
       if (!empty($day['open'])) {
         if (($day['start'] ?? '') >= ($day['end'] ?? '')) {
           $form_state->setErrorByName(
-            "hours_widget][{$key}][end",
-            $this->t('@day: closing time must be later than opening time.', ['@day' => $this->t($label)])
-          );
+                "hours_widget][{$key}][end",
+                $this->t('@day: closing time must be later than opening time.', ['@day' => $this->t($label)])
+            );
         }
       }
     }
@@ -170,11 +169,11 @@ final class AgencyForm extends ContentEntityForm {
         $this->messenger()->addStatus($this->t('New agency %label has been created.', $messageArgs)),
         $this->logger('appointment')->notice('New agency %label has been created.', $loggerArgs),
       ],
-      SAVED_UPDATED => [
-        $this->messenger()->addStatus($this->t('The agency %label has been updated.', $messageArgs)),
-        $this->logger('appointment')->notice('The agency %label has been updated.', $loggerArgs),
-      ],
-      default       => throw new \LogicException('Could not save the entity.'),
+            SAVED_UPDATED => [
+              $this->messenger()->addStatus($this->t('The agency %label has been updated.', $messageArgs)),
+              $this->logger('appointment')->notice('The agency %label has been updated.', $loggerArgs),
+            ],
+            default       => throw new \LogicException('Could not save the entity.'),
     };
 
     $form_state->setRedirectUrl($this->entity->toUrl());
@@ -188,7 +187,8 @@ final class AgencyForm extends ContentEntityForm {
   /**
    * Builds a time options array in 30-minute increments from 00:00 to 23:30.
    *
-   * @return array<string, string>  e.g. ['09:00' => '09:00', '09:30' => '09:30']
+   * @return array<string, string>
+   *   e.g. ['09:00' => '09:00', '09:30' => '09:30']
    */
   private function buildTimeOptions(): array {
     $options = [];

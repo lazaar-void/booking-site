@@ -20,15 +20,16 @@ class AppointmentController extends ControllerBase {
 
   public function __construct(
     protected AppointmentManagerService $manager,
-  ) {}
+  ) {
+  }
 
   /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
     return new static(
-      $container->get('appointment.manager'),
-    );
+          $container->get('appointment.manager'),
+      );
   }
 
   /**
@@ -55,6 +56,7 @@ class AppointmentController extends ControllerBase {
    *   ISO date Y-m-d (from route).
    *
    * @return \Symfony\Component\HttpFoundation\JsonResponse
+   *   Response wrapped in JSON.
    */
   public function slotsJson(int $adviser_id, string $date): JsonResponse {
     $adviser = User::load($adviser_id);
@@ -77,6 +79,7 @@ class AppointmentController extends ControllerBase {
    *   Adviser user ID.
    *
    * @return \Symfony\Component\HttpFoundation\JsonResponse
+   *   Response wrapped in JSON.
    */
   public function slotsRangeJson(Request $request, int $adviser_id): JsonResponse {
     $adviser = User::load($adviser_id);

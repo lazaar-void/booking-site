@@ -16,7 +16,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Provides a confirmation form for cancelling an appointment (soft delete).
  */
 final class AppointmentCancelForm extends ConfirmFormBase {
-
   /**
    * The appointment entity being cancelled.
    *
@@ -30,16 +29,17 @@ final class AppointmentCancelForm extends ConfirmFormBase {
   public function __construct(
     protected AppointmentManagerService $manager,
     protected EntityTypeManagerInterface $entityTypeManager,
-  ) {}
+  ) {
+  }
 
   /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
     return new static(
-      $container->get('appointment.manager'),
-      $container->get('entity_type.manager'),
-    );
+          $container->get('appointment.manager'),
+          $container->get('entity_type.manager'),
+      );
   }
 
   /**

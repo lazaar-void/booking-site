@@ -25,7 +25,8 @@ class CsvImporter {
     protected LoggerChannelInterface $logger,
     protected MessengerInterface $messenger,
     protected FileSystemInterface $fileSystem,
-  ) {}
+  ) {
+  }
 
   /**
    * Returns the file system service.

@@ -14,33 +14,33 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Second step of modification: Identity verification via phone number.
  */
 class AppointmentVerifyForm extends FormBase {
-
   const STORE_KEY = 'appointment_modify';
 
   public function __construct(
     protected EntityTypeManagerInterface $entityTypeManager,
     protected PrivateTempStoreFactory $tempStoreFactory,
-  ) {}
-
-  /**
-   *
-   */
-  public static function create(ContainerInterface $container): static {
-    return new static(
-      $container->get('entity_type.manager'),
-      $container->get('tempstore.private')
-    );
+  ) {
   }
 
   /**
-   *
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container): static {
+    return new static(
+          $container->get('entity_type.manager'),
+          $container->get('tempstore.private')
+      );
+  }
+
+  /**
+   * {@inheritdoc}
    */
   public function getFormId(): string {
     return 'appointment_verify_form';
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state): array {
     $store = $this->tempStoreFactory->get(self::STORE_KEY);
@@ -69,7 +69,7 @@ class AppointmentVerifyForm extends FormBase {
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state): void {
     $store = $this->tempStoreFactory->get(self::STORE_KEY);
@@ -85,7 +85,7 @@ class AppointmentVerifyForm extends FormBase {
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state): void {
     $store = $this->tempStoreFactory->get(self::STORE_KEY);

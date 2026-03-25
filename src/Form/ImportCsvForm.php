@@ -14,7 +14,6 @@ use Drupal\file\Entity\File;
  * Provides a CSV import form for Agencies and Advisers.
  */
 class ImportCsvForm extends FormBase {
-
   /**
    * The CSV importer service.
    */
@@ -32,8 +31,8 @@ class ImportCsvForm extends FormBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('appointment.csv_importer')
-    );
+          $container->get('appointment.csv_importer')
+      );
   }
 
   /**
