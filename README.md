@@ -144,6 +144,11 @@ The module includes 3 migration definitions in `migrations/` that can seed the s
 # Import all migrations (respects dependency order)
 drush migrate:import --group=appointment
 
+#More reliable alternative to ensure dependency order
+vendor/bin/drush migrate:import appointment_agencies
+vendor/bin/drush migrate:import appointment_advisers
+vendor/bin/drush migrate:import appointment_appointments
+
 # Check status
 drush migrate:status --group=appointment
 
