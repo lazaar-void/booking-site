@@ -15,6 +15,15 @@ entity.appointment_agency.settings:
   requirements:
     _permission: "administer appointment_agency"
 
+# Admin Agencies listing routes.
+entity.appointment_agency.collection_structure:
+  path: "admin/structure/appointment-agency/agencies"
+  defaults:
+    _view: 'appointment_agency_admin'
+    _title: 'Agencies'
+  requirements:
+    _permission: 'administer appointment_agency'
+
 appointment.import_csv:
   path: "/admin/config/appointment/import"
   defaults:
